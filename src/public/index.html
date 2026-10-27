@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SheetsToOBS - Desktop Control Center</title>
+  <link rel="icon" type="image/png" href="SheetsToOBS_Logo.png">
+  <link rel="shortcut icon" type="image/png" href="SheetsToOBS_Logo.png">
+  <link rel="apple-touch-icon" href="SheetsToOBS_Logo.png">
+  <link rel="stylesheet" href="app.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="experimental-off dark-theme mode-simple">
+  <div class="app-container">
+    
+    <!-- TOP TITLE / APP HEADER -->
+    <header class="app-header">
+      <div class="header-main-row">
+        <div class="header-left">
+          <div class="brand-logo">
+            <img src="SheetsToOBS_Logo.png" alt="SheetsToOBS Logo" class="brand-logo-img">
+            <div class="brand-text">
+              <span class="brand-title">SheetsToOBS</span>
+              <span class="brand-subtitle">Google Sheet Real-Time Sync Controller</span>
+            </div>
+          </div>
+
+          <!-- HEADER PROFILE SELECTOR -->
+          <div class="header-profile-picker">
+            <label for="headerProfileSelect" class="profile-label">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6h16M4 12h16M4 18h10"></path>
+              </svg>
+              <span>Profile:</span>
+            </label>
+            <select id="headerProfileSelect" class="select-profile-header">
+              <option value="Default">Default</option>
+            </select>
+            <button id="btnHeaderNewProfile" class="btn btn-xs btn-outline" title="Create New Profile">+</button>
+          </div>
+
+          <div id="simBadge" class="sim-badge hidden">
+            <span class="sim-pulse"></span>
+            <span>SIMULATION</span>
+          </div>
+        </div>
+
+        <!-- MODE TOGGLE (Simplified vs Advanced) -->
+        <div class="header-mode-toggle" id="headerModeToggle">
+          <button type="button" id="btnModeSimple" class="btn-mode active" title="Switch to Simplified Compact View">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>Simple</span>
+          </button>
+          <button type="button" id="btnModeAdvanced" class="btn-mode" title="Switch to Advanced Detailed View">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>Advanced</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="header-action-row">
+        <a href="dashboard.html" target="_blank" class="btn btn-outline btn-icon experimental-only" style="border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; text-decoration: none;" title="Open the live web control sheet (reads the Stream tab, edits need the Apps Script bridge)">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span>Control Sheet <small class="experimental-tag">Experimental</small></span>
+        </a>
+        <button id="btnSyncNow" class="btn btn-secondary btn-icon" title="Force Sync Immediately">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+          </svg>
+          <span>Sync Now</span>
+        </button>
+
+        <button id="btnToggleEngine" class="btn btn-primary btn-toggle-engine">
+          <svg class="icon btn-start-icon" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <svg class="icon btn-stop-icon hidden" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+          <span id="engineBtnText">Start Sync</span>
+        </button>
+
+        <button id="btnQuitApp" class="btn btn-outline btn-icon btn-danger-outline" title="Close GUI and Stop Background Server">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+            <line x1="12" y1="2" x2="12" y2="12"></line>
+          </svg>
+          <span>Quit</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- REAL-TIME STATUS OVERVIEW BAR -->
+    <section class="status-grid">
+      <!-- OBS WebSocket Card -->
+      <div class="status-card" id="cardObs">
+        <div class="card-header">
+          <div class="card-title">
+            <svg class="card-icon obs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="4"></circle>
+              <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line>
+              <line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line>
+              <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line>
+              <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"></line>
+            </svg>
+            <span>OBS WebSocket</span>
+          </div>
+          <span id="obsBadge" class="badge badge-disconnected">Disconnected</span>
+        </div>
+        <div class="card-body">
+          <div class="metric-row">
+            <span class="metric-label">Address:</span>
+            <span class="metric-value font-mono" id="obsAddressText">ws://localhost:4455</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Version / Latency:</span>
+            <span class="metric-value" id="obsVersionLatency">- / - ms</span>
+          </div>
+          <div class="metric-row metric-row-detail">
+            <span class="metric-label">Scenes / Sources:</span>
+            <span class="metric-value" id="obsScenesSources">- scenes / - mapped</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Google Sheets Sync Card -->
+      <div class="status-card" id="cardSheet">
+        <div class="card-header">
+          <div class="card-title">
+            <svg class="card-icon sheet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="3" y1="15" x2="21" y2="15"></line>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+            <span>Google Sheets Sync</span>
+          </div>
+          <span id="sheetBadge" class="badge badge-idle">Idle</span>
+        </div>
+        <div class="card-body">
+          <div class="metric-row">
+            <span class="metric-label">Active Profile:</span>
+            <span class="metric-value font-mono" id="activeProfileLabel">Default</span>
+          </div>
+          <div class="metric-row metric-row-detail">
+            <span class="metric-label">Target Sheet:</span>
+            <span class="metric-value font-mono truncate" id="sheetTargetText">Not Configured</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Last Sync / Rows:</span>
+            <span class="metric-value" id="sheetRowsReqs">Never (0 rows)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sync Frequency & Mode Card -->
+      <div class="status-card" id="cardControls">
+        <div class="card-header">
+          <div class="card-title">
+            <svg class="card-icon config-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>Engine Controls</span>
+          </div>
+          <span id="engineBadge" class="badge badge-idle">Ready</span>
+        </div>
+        <div class="card-body">
+          <div class="metric-row">
+            <span class="metric-label">Poll Frequency:</span>
+            <select id="quickPollingSelect" class="select-inline">
+              <option value="1000">1.0 sec (Fast)</option>
+              <option value="2000" selected>2.0 sec (Default)</option>
+              <option value="5000">5.0 sec (Relaxed)</option>
+              <option value="10000">10.0 sec (Slow)</option>
+            </select>
+          </div>
+          <div class="metric-row metric-row-detail">
+            <span class="metric-label">Offline Demo:</span>
+            <button id="btnToggleSim" class="btn btn-xs btn-outline">Enable Simulation</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="app-nav">
+      <button class="nav-tab tab-advanced-only" data-tab="tabSources">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        <span>Live Source Mapping</span>
+        <span id="sourcesCountBadge" class="tab-counter">0</span>
+        <span id="sourcesIssueBadge" class="tab-counter tab-counter-issue hidden">0 Issues</span>
+      </button>
+
+      <button class="nav-tab tab-advanced-only" data-tab="tabSheetData">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <span>Sheet Data Grid</span>
+        <span id="sheetRowsBadge" class="tab-counter">0</span>
+      </button>
+
+      <button class="nav-tab active" data-tab="tabLogs">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+        <span>Real-Time Logs</span>
+        <span id="logCountBadge" class="tab-counter">0</span>
+      </button>
+
+      <button class="nav-tab" data-tab="tabSettings">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Profiles & Config</span>
+      </button>
+
+      <button class="nav-tab" data-tab="tabPersonalization">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12"></path>
+          <circle cx="8" cy="9" r="1.5" fill="currentColor"></circle>
+          <circle cx="12" cy="7" r="1.5" fill="currentColor"></circle>
+          <circle cx="16" cy="9" r="1.5" fill="currentColor"></circle>
+          <circle cx="15" cy="14" r="1.5" fill="currentColor"></circle>
+          <circle cx="9" cy="14" r="1.5" fill="currentColor"></circle>
+        </svg>
+        <span>Personalization</span>
+      </button>
+
+      <button class="nav-tab tab-advanced-only" data-tab="tabGuide">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span>Tag Syntax & Guide</span>
+      </button>
+    </nav>
+
+    <!-- TAB CONTENTS -->
+    <main class="app-content">
+
+      <!-- TAB 1: LIVE SOURCES MAPPING -->
+      <section id="tabSources" class="tab-pane">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title-area">
+              <h3>Monitored OBS Sources Matrix</h3>
+              <p class="panel-subtitle">Discovered sources naming pattern: <code>[Source Name] |sheet [Row #]</code></p>
+            </div>
+            <div class="panel-actions source-filters-wrapper">
+              <div class="source-filter-chips">
+                <button type="button" class="btn-chip active" data-source-filter="all" id="filterSourcesAll">
+                  All <span class="chip-counter" id="chipCountAll">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-warning" data-source-filter="issues" id="filterSourcesIssues" title="Sources with errors, missing rows, or naming mismatches">
+                  ⚠️ Issues & Mismatches <span class="chip-counter chip-counter-warn" id="chipCountIssues">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-missing" data-source-filter="missing" id="filterSourcesMissing" title="Missing rows in sheet or Google Sheet items not yet created in OBS">
+                  ❓ Missing Stuff <span class="chip-counter chip-counter-missing" id="chipCountMissing">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-mismatch" data-source-filter="mismatches" id="filterSourcesMismatches" title="Sources where OBS name does not match Sheet Label">
+                  🏷️ Name Mismatches <span class="chip-counter chip-counter-mismatch" id="chipCountMismatches">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-variant" data-source-filter="variants" id="filterSourcesVariants" title="All sources with color / style variants (Red, Blue, White, Black, Extra)">
+                  🎨 All Variants <span class="chip-counter chip-counter-variant" id="chipCountVariants">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-variant-red" data-source-filter="variant-red" id="filterSourcesRed" title="Sources with Red color variant">
+                  <span class="variant-dot dot-red"></span> Red <span class="chip-counter" id="chipCountRed">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-variant-blue" data-source-filter="variant-blue" id="filterSourcesBlue" title="Sources with Blue color variant">
+                  <span class="variant-dot dot-blue"></span> Blue <span class="chip-counter" id="chipCountBlue">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-variant-white" data-source-filter="variant-white" id="filterSourcesWhite" title="Sources with White color variant">
+                  <span class="variant-dot dot-white"></span> White <span class="chip-counter" id="chipCountWhite">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-variant-black" data-source-filter="variant-black" id="filterSourcesBlack" title="Sources with Black color variant">
+                  <span class="variant-dot dot-black"></span> Black <span class="chip-counter" id="chipCountBlack">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-variant-extra" data-source-filter="variant-extra" id="filterSourcesExtra" title="Sources with Extra / Alt variant">
+                  <span class="variant-dot dot-extra"></span> Extra <span class="chip-counter" id="chipCountExtra">0</span>
+                </button>
+                <button type="button" class="btn-chip" data-source-filter="synced" id="filterSourcesSynced">
+                  ✅ Exact Matches <span class="chip-counter" id="chipCountSynced">0</span>
+                </button>
+                <button type="button" class="btn-chip chip-wip" data-source-filter="wip" id="filterSourcesWip" title="Sources with WIP in their name">
+                  🚧 WIP <span class="chip-counter chip-counter-wip" id="chipCountWip">0</span>
+                </button>
+              </div>
+
+              <div class="scene-filter-dropdown" id="sceneFilterDropdown">
+                <button type="button" class="btn-scene-filter" id="btnSceneFilterToggle" title="Filter / monitor specific OBS scenes">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                    <line x1="7" y1="2" x2="7" y2="22"></line>
+                    <line x1="17" y1="2" x2="17" y2="22"></line>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <line x1="2" y1="7" x2="7" y2="7"></line>
+                    <line x1="2" y1="17" x2="7" y2="17"></line>
+                    <line x1="17" y1="17" x2="22" y2="17"></line>
+                    <line x1="17" y1="7" x2="22" y2="7"></line>
+                  </svg>
+                  <span id="sceneFilterLabel">Scenes (All)</span>
+                  <svg class="dropdown-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <div class="scene-dropdown-menu hidden" id="sceneDropdownMenu">
+                  <div class="scene-dropdown-header">
+                    <span class="scene-dropdown-title">Monitored Scenes</span>
+                    <div class="scene-quick-actions">
+                      <button type="button" class="btn-link" id="btnSelectAllScenes">All</button>
+                      <span class="divider">|</span>
+                      <button type="button" class="btn-link" id="btnDeselectAllScenes">None</button>
+                    </div>
+                  </div>
+                  <div class="scene-search-box">
+                    <input type="text" id="sceneSearchInput" placeholder="Filter scene list..." class="input-scene-search">
+                  </div>
+                  <div class="scene-checkbox-list" id="sceneCheckboxList">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+              </div>
+
+              <select id="filterSourceType" class="select-inline select-filter" title="Filter by source type">
+                <option value="all">All Types</option>
+                <option value="Text">Text</option>
+                <option value="Color">Color</option>
+                <option value="Image">Image</option>
+                <option value="Video">Video</option>
+                <option value="Browser">Browser</option>
+                <option value="HS">HS (Visibility)</option>
+                <option value="SourceSwitcher">SourceSwitcher</option>
+              </select>
+
+              <input type="text" id="filterSources" placeholder="Search OBS source, expected name, row, scene..." class="input-search">
+
+              <div class="filter-wip-toggle" title="Ignore errors, missing rows, and naming mismatches for sources containing 'WIP' in their name">
+                <label class="chip-toggle-label">
+                  <input type="checkbox" id="chkIgnoreWip" checked>
+                  <span>Ignore WIP</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="panel-body table-container">
+            <table class="data-table" id="sourcesTable">
+              <thead>
+                <tr>
+                  <th width="14%" class="sortable-th" data-action="sort-source" data-sort-col="sceneName" title="Click to sort by Scene / Group">
+                    <div class="th-content">
+                      <span>Scene / Group</span>
+                      <span class="sort-indicator" id="sort-ind-source-sceneName">⇅</span>
+                    </div>
+                  </th>
+                  <th width="20%" class="sortable-th" data-action="sort-source" data-sort-col="sourceName" title="Click to sort by OBS Source Name">
+                    <div class="th-content">
+                      <span>OBS Source Name</span>
+                      <span class="sort-indicator" id="sort-ind-source-sourceName">⇅</span>
+                    </div>
+                  </th>
+                  <th width="22%">Expected Name & Verification</th>
+                  <th width="7%" class="sortable-th" data-action="sort-source" data-sort-col="targetRow" title="Click to sort by Row Number">
+                    <div class="th-content">
+                      <span>Row</span>
+                      <span class="sort-indicator" id="sort-ind-source-targetRow">⇅</span>
+                    </div>
+                  </th>
+                  <th width="8%" class="sortable-th" data-action="sort-source" data-sort-col="sourceType" title="Click to sort by Type">
+                    <div class="th-content">
+                      <span>Type</span>
+                      <span class="sort-indicator" id="sort-ind-source-sourceType">⇅</span>
+                    </div>
+                  </th>
+                  <th width="15%">Sheet Value (Parsed)</th>
+                  <th width="8%">Tags</th>
+                  <th width="6%">State</th>
+                </tr>
+              </thead>
+              <tbody id="sourcesTableBody">
+                <tr class="empty-row">
+                  <td colspan="8">No mapped sources discovered yet. Make sure OBS is connected and your sources include <code>|sheet &lt;row&gt;</code> in their name.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: SHEET DATA GRID -->
+      <section id="tabSheetData" class="tab-pane">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title-area">
+              <h3>Google Sheet Live Data Grid</h3>
+              <p class="panel-subtitle">Live values retrieved from Columns B (Label), C (Type), D (Value) & E (EZ Sheet ID)</p>
+            </div>
+            <div class="panel-actions">
+              <input type="text" id="filterSheetData" placeholder="Filter rows..." class="input-search">
+            </div>
+          </div>
+          <div class="panel-body table-container">
+            <table class="data-table" id="sheetDataTable">
+              <thead>
+                <tr>
+                  <th width="8%" class="sortable-th" data-action="sort-sheet" data-sort-col="row" title="Click to sort by Row Number">
+                    <div class="th-content">
+                      <span>#</span>
+                      <span class="sort-indicator" id="sort-ind-sheet-row">⇅</span>
+                    </div>
+                  </th>
+                  <th width="20%" class="sortable-th" data-action="sort-sheet" data-sort-col="label" title="Click to sort by Expected Label">
+                    <div class="th-content">
+                      <span>Col B: Expected Label</span>
+                      <span class="sort-indicator" id="sort-ind-sheet-label">⇅</span>
+                    </div>
+                  </th>
+                  <th width="12%" class="sortable-th" data-action="sort-sheet" data-sort-col="type" title="Click to sort by Type">
+                    <div class="th-content">
+                      <span>Col C: Type</span>
+                      <span class="sort-indicator" id="sort-ind-sheet-type">⇅</span>
+                    </div>
+                  </th>
+                  <th width="35%">Col D: Cell Value / Tag Expression</th>
+                  <th width="25%" class="sortable-th" data-action="sort-sheet" data-sort-col="ezSheetId" title="Click to sort by EZ Sheet ID">
+                    <div class="th-content">
+                      <span>Col E: EZ Sheet ID (OBS Name)</span>
+                      <span class="sort-indicator" id="sort-ind-sheet-ezSheetId">⇅</span>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="sheetDataTableBody">
+                <tr class="empty-row">
+                  <td colspan="5">No sheet data fetched yet. Check your Google Sheet API settings or click "Sync Now".</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: REAL-TIME LOGS -->
+      <section id="tabLogs" class="tab-pane active">
+        <!-- Live Synced Values Diff Card -->
+        <div class="live-diff-card" id="liveDiffCard">
+          <div class="diff-card-header">
+            <div class="diff-header-left">
+              <span class="diff-pulse-dot" id="diffPulseDot"></span>
+              <strong>Last Synced Changes (Live Diff)</strong>
+              <span class="diff-time-badge" id="diffTimeBadge">Updated: Just now</span>
+            </div>
+            <button type="button" id="btnToggleDiffView" class="btn-xs-link">Collapse ▲</button>
+          </div>
+          <div class="diff-items-container" id="diffItemsContainer">
+            <div class="diff-empty-msg">No value changes detected in the current session. Click "Sync Now" or update a sheet cell.</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="log-filter-bar">
+              <button class="btn-chip active" data-filter="all">All Events</button>
+              <button class="btn-chip" data-filter="obs">OBS WebSocket</button>
+              <button class="btn-chip" data-filter="sheet">Google Sheets</button>
+              <button class="btn-chip" data-filter="diff">Value Updates</button>
+              <button class="btn-chip" data-filter="visibility">Visibility</button>
+              <button class="btn-chip" data-filter="error">Errors</button>
+            </div>
+            <div class="panel-actions">
+              <label class="checkbox-label">
+                <input type="checkbox" id="chkAutoScroll" checked> Auto-scroll
+              </label>
+              <button id="btnClearLogs" class="btn btn-xs btn-outline">Clear Logs</button>
+              <button id="btnExportLogs" class="btn btn-xs btn-outline">Export Logs</button>
+            </div>
+          </div>
+          <div class="panel-body log-console-container" id="logConsole">
+            <!-- Dynamic log rows -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: PROFILES & CONFIGURATION -->
+      <section id="tabSettings" class="tab-pane">
+        <div class="settings-layout">
+
+          <!-- PROFILE MANAGEMENT BAR -->
+          <div class="panel profile-manager-card">
+            <div class="profile-manager-row">
+              <div class="profile-select-group">
+                <label for="settingsProfileSelect"><strong>Active Profile:</strong></label>
+                <select id="settingsProfileSelect" class="select-profile-large">
+                  <option value="Default">Default</option>
+                </select>
+              </div>
+
+              <div class="profile-btn-group">
+                <button id="btnNewProfile" class="btn btn-sm btn-outline" title="Create New Profile">
+                  <span>+ New Profile</span>
+                </button>
+                <button id="btnRenameProfile" class="btn btn-sm btn-outline" title="Rename Current Profile">
+                  <span>✏️ Rename</span>
+                </button>
+                <button id="btnDuplicateProfile" class="btn btn-sm btn-outline" title="Duplicate Profile">
+                  <span>📋 Duplicate</span>
+                </button>
+                <button id="btnDeleteProfile" class="btn btn-sm btn-outline btn-danger-outline" title="Delete Profile">
+                  <span>🗑️ Delete</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="profile-share-bar">
+              <label class="checkbox-label share-access-toggle" title="For admins handing a ready-to-run profile to their producers. The OBS password is never included.">
+                <input type="checkbox" id="chkShareSheetAccess">
+                <span>Include Sheet ID &amp; Google API key when sharing</span>
+              </label>
+              <div class="share-btn-group">
+                <button id="btnExportActiveProfile" class="btn btn-xs btn-secondary" title="Export this profile to a JSON file for sharing (no OBS password)">
+                  <span>📥 Export Profile</span>
+                </button>
+                <button id="btnExportActiveFull" class="btn btn-xs btn-outline" title="Export full backup including personal API key & OBS password">
+                  <span>🔒 Full Backup</span>
+                </button>
+                <button id="btnExportAllProfiles" class="btn btn-xs btn-secondary" title="Export all profiles to a single bundle for sharing (no OBS password)">
+                  <span>📦 Export All</span>
+                </button>
+                <button id="btnOpenImportModal" class="btn btn-xs btn-secondary" title="Import profile or bundle from JSON">
+                  <span>📤 Import Config</span>
+                </button>
+                <button id="btnCopyShareJson" class="btn btn-xs btn-outline" title="Copy this profile's share JSON to the clipboard">
+                  <span>🔗 Copy Share JSON</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings Form -->
+          <div class="panel settings-panel">
+            <div class="panel-header">
+              <div class="panel-title-area">
+                <h3 id="formProfileTitle">Profile Settings: Default</h3>
+                <p class="panel-subtitle">Configure Google Sheets API credentials, OBS WebSocket, and logging preferences.</p>
+              </div>
+              <button id="btnSaveConfig" class="btn btn-primary">Save Profile Settings</button>
+            </div>
+
+            <div class="panel-body form-grid">
+              
+              <div class="form-section-header">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+                <h4>Google Sheets API Configuration</h4>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="cfgSheetId">Google Spreadsheet ID or Full URL <span class="required">*</span></label>
+                <div class="input-with-action">
+                  <input type="text" id="cfgSheetId" placeholder="Paste Sheet ID or full Google Sheets URL (https://docs.google.com/spreadsheets/d/...)">
+                  <button id="btnExtractSheetId" class="btn btn-sm btn-outline" title="Extract Sheet ID from URL">Extract ID</button>
+                </div>
+                <span class="input-hint">The source spreadsheet must be set to "Anyone with the link can view".</span>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgTabName">Data / Interface Tab Name <span class="required">*</span></label>
+                <input type="text" id="cfgTabName" placeholder="Interface" value="Interface">
+                <span class="input-hint">The tab containing row numbers and source values (e.g. Interface)</span>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgRange">Cell Range <span class="required">*</span></label>
+                <input type="text" id="cfgRange" placeholder="C2:D" value="C2:D">
+                <span class="input-hint">Column C is Type, Column D is Value (e.g. C2:D)</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="cfgApiKey">Google Sheets API Key <span class="required">*</span></label>
+                <div class="input-with-action">
+                  <input type="password" id="cfgApiKey" placeholder="Enter Google API Key">
+                  <button id="btnToggleApiKey" class="btn btn-sm btn-outline" type="button">Show</button>
+                </div>
+                <span class="input-hint">Google Cloud Console API Key with Google Sheets API enabled.</span>
+              </div>
+
+              <div class="form-group full-width">
+                <button id="btnTestSheetConn" class="btn btn-secondary btn-full">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 14 14"></polyline>
+                  </svg>
+                  <span>Test Google Sheets Connection</span>
+                </button>
+                <div id="sheetTestResult" class="test-result-box hidden"></div>
+              </div>
+
+              <div class="form-section-header">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <circle cx="12" cy="12" r="4"></circle>
+                </svg>
+                <h4>OBS WebSocket Server Settings</h4>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgObsAddress">OBS WebSocket Address <span class="required">*</span></label>
+                <input type="text" id="cfgObsAddress" placeholder="ws://localhost:4455" value="ws://localhost:4455">
+                <span class="input-hint">OBS Tools -> WebSocket Server Settings</span>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgObsAuth">OBS WebSocket Password</label>
+                <div class="input-with-action">
+                  <input type="password" id="cfgObsAuth" placeholder="(Leave blank if no password)">
+                  <button id="btnToggleObsAuth" class="btn btn-sm btn-outline" type="button">Show</button>
+                </div>
+                <span class="input-hint">Server password configured in OBS settings</span>
+              </div>
+
+              <div class="form-group full-width">
+                <button id="btnTestObsConn" class="btn btn-secondary btn-full">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                  <span>Test OBS WebSocket Connection</span>
+                </button>
+                <div id="obsTestResult" class="test-result-box hidden"></div>
+              </div>
+
+              <!-- CONTROL SHEET (WEB DASHBOARD) BRIDGE: EXPERIMENTAL, hidden unless enabled (see README) -->
+              <div class="experimental-only experimental-block">
+              <!-- CONTROL SHEET (WEB DASHBOARD) BRIDGE -->
+              <div class="form-section-header">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="9" y1="21" x2="9" y2="9"></line>
+                </svg>
+                <h4>Control Sheet (Web Dashboard) <small class="experimental-tag">Experimental</small></h4>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgControlTab">Control Tab</label>
+                <input type="text" id="cfgControlTab" placeholder="Stream1" value="Stream1">
+                <span class="input-hint">The Stream tab the Control Sheet opens (Stream1, Stream2…)</span>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgControlPoll">Dashboard Refresh (seconds)</label>
+                <input type="number" id="cfgControlPoll" min="2" max="60" step="1" value="4">
+                <span class="input-hint">How often the Control Sheet re-reads the tab</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="cfgScriptUrl">Apps Script Web App URL</label>
+                <input type="text" id="cfgScriptUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false">
+                <span class="input-hint" id="cfgScriptUrlHint">From Deploy › Manage deployments in this sheet's Apps Script. Leave empty for read-only.</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="cfgScriptToken">Bridge Token</label>
+                <div class="input-with-action">
+                  <input type="password" id="cfgScriptToken" placeholder="Token printed by setupControlBridge()" autocomplete="off">
+                  <button id="btnToggleScriptToken" class="btn btn-sm btn-outline" type="button">Show</button>
+                </div>
+                <span class="input-hint">Saved with this profile. It stays the same until you run rotateControlToken() in Apps Script. Removed from "clean" profile exports.</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="cfgAllowLanDashboard">
+                  <span>Allow other devices on my network to open the Control Sheet and edit the control tab</span>
+                </label>
+              </div>
+
+              <div class="form-group full-width">
+                <button id="btnTestBridge" class="btn btn-secondary btn-full" type="button">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                  <span>Save &amp; Test Apps Script Bridge</span>
+                </button>
+                <div id="bridgeTestResult" class="test-result-box hidden"></div>
+              </div>
+
+              </div>
+
+              <!-- LOGGING & VISIBILITY OPTIONS -->
+              <div class="form-section-header">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <h4>Logging & Visibility Behavior</h4>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="checkbox-label highlight-checkbox">
+                  <input type="checkbox" id="cfgLogVisibilityOnlyOnChanges" checked>
+                  <span><strong>Only log visibility when state actually changes</strong> (Hides repeating visibility logs when unchanged)</span>
+                </label>
+                <span class="input-hint">When checked, hide/show commands will not log unless the source's visibility actually toggles.</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="cfgShowVisibilityLogs" checked>
+                  <span>Show visibility events in log console</span>
+                </label>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="checkbox-label highlight-checkbox">
+                  <input type="checkbox" id="cfgLogMissingRowsOnlyOnChanges" checked>
+                  <span><strong>Only log missing rows on state change</strong> (Prevents repeating warnings on every sync)</span>
+                </label>
+                <span class="input-hint">When checked, missing row warnings log once upon detection, not every sync cycle.</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="cfgShowMissingRowLogs">
+                  <span>Show missing row warnings in log console</span>
+                </label>
+              </div>
+
+              <div class="form-section-header">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline>
+                </svg>
+                <h4>Sync Engine Preferences</h4>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgPolling">Polling Interval (Milliseconds)</label>
+                <input type="number" id="cfgPolling" min="500" step="250" value="2000">
+                <span class="input-hint">Recommended: 2000ms (1 req/sec is API safety limit)</span>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgDimension">Major Dimension</label>
+                <input type="text" id="cfgDimension" value="COLUMNS" readonly class="input-readonly">
+                <span class="input-hint">Default query layout</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="cfgAutoStart">
+                  <span>Automatically start synchronization loop when application launches</span>
+                </label>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: PERSONALIZATION & THEME STUDIO -->
+      <section id="tabPersonalization" class="tab-pane">
+        <div class="personalization-grid">
+          
+          <!-- Accent Theme Palette Card -->
+          <div class="panel personalization-panel">
+            <div class="panel-header">
+              <div class="panel-title-area">
+                <h3>Accent Theme Color Palette</h3>
+                <p class="panel-subtitle">Select a curated broadcast theme color or pick a custom hex value.</p>
+              </div>
+              <button type="button" id="btnResetPersonalization" class="btn btn-outline btn-sm">Reset to Default</button>
+            </div>
+            <div class="panel-body">
+              <div class="theme-picker-section">
+                <label class="personalization-label">Preset Accent Colors:</label>
+                <div class="theme-swatch-grid" id="themeSwatchGrid">
+                  <button type="button" class="btn-theme-swatch active" data-color="#06d6a0" style="--swatch-color: #06d6a0;">
+                    <span class="swatch-indicator"></span>
+                    <span class="swatch-name">Cyber Emerald</span>
+                  </button>
+                  <button type="button" class="btn-theme-swatch" data-color="#3b82f6" style="--swatch-color: #3b82f6;">
+                    <span class="swatch-indicator"></span>
+                    <span class="swatch-name">Electric Blue</span>
+                  </button>
+                  <button type="button" class="btn-theme-swatch" data-color="#00f0ff" style="--swatch-color: #00f0ff;">
+                    <span class="swatch-indicator"></span>
+                    <span class="swatch-name">Neon Cyan</span>
+                  </button>
+                  <button type="button" class="btn-theme-swatch" data-color="#9146ff" style="--swatch-color: #9146ff;">
+                    <span class="swatch-indicator"></span>
+                    <span class="swatch-name">Twitch Purple</span>
+                  </button>
+                  <button type="button" class="btn-theme-swatch" data-color="#f59e0b" style="--swatch-color: #f59e0b;">
+                    <span class="swatch-indicator"></span>
+                    <span class="swatch-name">Stream Amber</span>
+                  </button>
+                  <button type="button" class="btn-theme-swatch" data-color="#ff4655" style="--swatch-color: #ff4655;">
+                    <span class="swatch-indicator"></span>
+                    <span class="swatch-name">Cyber Crimson</span>
+                  </button>
+                  <button type="button" class="btn-theme-swatch" data-color="#84cc16" style="--swatch-color: #84cc16;">
+                    <span class="swatch-indicator"></span>
+                    <span class="swatch-name">Neon Lime</span>
+                  </button>
+                  <button type="button" class="btn-theme-swatch" data-color="#ec4899" style="--swatch-color: #ec4899;">
+                    <span class="swatch-indicator"></span>
+                    <span class="swatch-name">Hot Pink</span>
+                  </button>
+                </div>
+
+                <div class="custom-color-control">
+                  <label for="pickerCustomColor" class="personalization-label">Custom Hex Accent:</label>
+                  <div class="custom-color-input-row">
+                    <input type="color" id="pickerCustomColor" value="#06d6a0" class="color-picker-input">
+                    <input type="text" id="inputCustomHex" value="#06d6a0" class="input-hex font-mono" placeholder="#06d6a0" maxlength="7">
+                    <button type="button" id="btnApplyCustomHex" class="btn btn-secondary btn-sm">Apply Hex</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Background Atmosphere / Mode Card -->
+          <div class="panel personalization-panel">
+            <div class="panel-header">
+              <div class="panel-title-area">
+                <h3>Background Atmosphere</h3>
+                <p class="panel-subtitle">Select the background contrast mode for streaming or studio environments.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="bg-mode-grid" id="bgModeGrid">
+                <button type="button" class="btn-bg-mode active" data-bg="carbon">
+                  <span class="bg-mode-preview bg-preview-carbon"></span>
+                  <div class="bg-mode-text">
+                    <strong>Deep Carbon</strong>
+                    <span>Balanced dark studio theme</span>
+                  </div>
+                </button>
+                <button type="button" class="btn-bg-mode" data-bg="midnight">
+                  <span class="bg-mode-preview bg-preview-midnight"></span>
+                  <div class="bg-mode-text">
+                    <strong>Midnight Nebula</strong>
+                    <span>Deep navy / indigo canvas</span>
+                  </div>
+                </button>
+                <button type="button" class="btn-bg-mode" data-bg="oled">
+                  <span class="bg-mode-preview bg-preview-oled"></span>
+                  <div class="bg-mode-text">
+                    <strong>OLED Pitch Black</strong>
+                    <span>Pure black #000000 high contrast</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- UI Layout & Density -->
+          <div class="panel personalization-panel">
+            <div class="panel-header">
+              <div class="panel-title-area">
+                <h3>Interface Density & Scaling</h3>
+                <p class="panel-subtitle">Adjust compactness and default launch view for small windows or full screens.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="density-selector-row">
+                <div class="form-group">
+                  <label class="personalization-label">Layout Density:</label>
+                  <div class="btn-group-toggle" id="densityToggleGroup">
+                    <button type="button" class="btn-density" data-density="compact">Compact</button>
+                    <button type="button" class="btn-density active" data-density="standard">Standard</button>
+                    <button type="button" class="btn-density" data-density="relaxed">Relaxed</button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="personalization-label">Default Launch View:</label>
+                  <div class="btn-group-toggle" id="defaultModeToggleGroup">
+                    <button type="button" class="btn-default-mode active" data-default-mode="simple">Simplified View</button>
+                    <button type="button" class="btn-default-mode" data-default-mode="advanced">Advanced View</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Theme Component Preview Box -->
+          <div class="panel personalization-panel full-width">
+            <div class="panel-header">
+              <div class="panel-title-area">
+                <h3>Live Theme Component Preview</h3>
+                <p class="panel-subtitle">Real-time preview of how buttons, active badges, inputs, and highlights appear with your active theme.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="live-preview-box">
+                <div class="preview-row">
+                  <button type="button" class="btn btn-primary">Primary Action</button>
+                  <button type="button" class="btn btn-secondary">Secondary Action</button>
+                  <button type="button" class="btn btn-outline">Outline Action</button>
+                  <span class="badge badge-syncing">Active Syncing</span>
+                  <span class="badge badge-connected">OBS Connected</span>
+                  <span class="badge badge-idle">Idle Status</span>
+                </div>
+                <div class="preview-row">
+                  <input type="text" value="Sample Input Field (Active Focus)" class="preview-input" readonly>
+                  <span class="tag-badge tag-color-preview font-mono" id="previewColorTag" style="background: var(--accent-blue); color: #0c0f17; font-weight: 700; padding: 6px 12px; border-radius: 6px;">?color=HEX; Live Preview</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- Experimental Features -->
+          <div class="panel personalization-panel full-width" style="grid-column: 1 / -1;" id="experimentalPanel">
+            <div class="panel-header">
+              <div class="panel-title-area">
+                <h3>Experimental Features</h3>
+                <p class="panel-subtitle">Features that are still being built and tested. Expect changes and bugs, and try them on a copy of your sheet.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <label class="checkbox-label">
+                <input type="checkbox" id="chkExperimentalControlSheet">
+                <span><strong>Control Sheet (Web Dashboard)</strong> <small class="experimental-tag">Experimental</small><br>
+                  <small class="input-hint">Adds the Control Sheet button and its connection settings: a web version of a Stream control tab that can write back to the sheet through an Apps Script bridge.</small></span>
+              </label>
+              <span class="input-hint hidden" id="experimentalForcedHint">Switched on by the SHEETSTOOBS_EXPERIMENTAL environment variable.</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- TAB 6: SYNTAX GUIDE & TAG BUILDER -->
+      <section id="tabGuide" class="tab-pane">
+        <div class="guide-grid">
+          
+          <div class="panel">
+            <div class="panel-header">
+              <h3>OBS Source Naming Standard</h3>
+            </div>
+            <div class="panel-body guide-content">
+              <p>To link any OBS source to a Google Sheet row, append <code>|sheet &lt;row #&gt;</code> to the source name:</p>
+              <div class="code-example-card">
+                <code>Team 1 Name |sheet 2</code>
+                <span class="desc">&rarr; Controlled by Row 2</span>
+              </div>
+              <div class="code-example-card">
+                <code>Player Photo |sheet 5</code>
+                <span class="desc">&rarr; Controlled by Row 5</span>
+              </div>
+              <div class="code-example-card">
+                <code>Camera Switcher |sheet 9</code>
+                <span class="desc">&rarr; Controlled by Row 9 (SourceSwitcher)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Supported Source Types (Column C)</h3>
+            </div>
+            <div class="panel-body guide-content">
+              <ul class="guide-list">
+                <li><strong>Text</strong>: Updates GDI+ / FreeType2 text content, color, font flags.</li>
+                <li><strong>Color</strong>: Updates color source with hex code (e.g. <code>#3B82F6</code>).</li>
+                <li><strong>Image</strong>: Updates image source file path or URL with transition delay.</li>
+                <li><strong>Video</strong>: Updates media source local file path with transition delay.</li>
+                <li><strong>Browser</strong>: Updates browser source URL.</li>
+                <li><strong>HS</strong>: Visibility only (put <code>hide</code> or <code>show</code>).</li>
+                <li><strong>SourceSwitcher</strong> (or <strong>Switcher</strong>): Updates OBS Source Switcher source playlist using <code>;;</code> separated sources/scenes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- DEDICATED SOURCE SWITCHER & MULTI-SOURCE GUIDE -->
+          <div class="panel full-width">
+            <div class="panel-header">
+              <div class="panel-title-area">
+                <h3>🔄 Source Switcher & Multi-Source Playlists (;; Separator)</h3>
+                <p class="panel-subtitle">How to manage multi-camera rotations, dynamic sponsor reels, and scene switchers from Google Sheets.</p>
+              </div>
+            </div>
+            <div class="panel-body guide-content">
+              <p>When controlling an OBS **Source Switcher** source (such as from <code>exeldro/obs-source-switcher</code> or automated playlist sources), separate each source or scene name with a <strong>double semicolon (<code>;;</code>)</strong>.</p>
+              
+              <div class="guide-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 12px 0;">
+                
+                <div class="code-example-card" style="display: flex; flex-direction: column; gap: 6px; padding: 12px; background: rgba(6, 214, 160, 0.06); border: 1px solid rgba(6, 214, 160, 0.25); border-radius: 8px;">
+                  <strong style="color: #06d6a0;">📹 Multi-Camera Rotation</strong>
+                  <code>Caster Desk, Cam A;; Gameplay Direct;; Crowd Wide Angle</code>
+                  <span class="desc" style="font-size: 0.775rem; color: var(--text-muted);">Splits into 3 separate camera sources in the switcher playlist.</span>
+                </div>
+
+                <div class="code-example-card" style="display: flex; flex-direction: column; gap: 6px; padding: 12px; background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px;">
+                  <strong style="color: #60a5fa;">🏷️ Dynamic Sponsor Reel</strong>
+                  <code>Title Sponsor Banner;; Energy Drink Logo;; Hardware Partner</code>
+                  <span class="desc" style="font-size: 0.775rem; color: var(--text-muted);">Rotates all active sponsors defined in your broadcast spreadsheet.</span>
+                </div>
+
+                <div class="code-example-card" style="display: flex; flex-direction: column; gap: 6px; padding: 12px; background: rgba(147, 51, 234, 0.06); border: 1px solid rgba(147, 51, 234, 0.25); border-radius: 8px;">
+                  <strong style="color: #c084fc;">⚡ With Visibility Tag Modifier</strong>
+                  <code>?show;Main Stage Cam;; Replay Feed;; Crowd Cam</code>
+                  <span class="desc" style="font-size: 0.775rem; color: var(--text-muted);">Enables the switcher in OBS and populates all 3 sources simultaneously.</span>
+                </div>
+
+              </div>
+
+              <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6;">
+                <strong>💡 Why use <code>;;</code> (Double Semicolon)?</strong>
+                <ul style="margin: 4px 0 0 16px; padding: 0;">
+                  <li><strong>Comma-Safe:</strong> Allows source names that already contain commas (e.g. <code>Camera 1, Wide Angle</code>) without breaking.</li>
+                  <li><strong>Tag-Safe:</strong> Fully compatible alongside single-semicolon formatting tags like <code>?show;</code> or <code>?hide;</code>.</li>
+                  <li><strong>Instant Real-Time Sync:</strong> The tool automatically formats the source list into OBS-native item structures and updates OBS without freezing.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel full-width">
+            <div class="panel-header">
+              <h3>Cell Modifiers & Tags (Column D)</h3>
+            </div>
+            <div class="panel-body guide-content">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tag Modifier</th>
+                    <th>Syntax Example</th>
+                    <th>Effect in OBS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>?color=HEX;</code></td>
+                    <td><code>?color=FF5500;Grand Finals</code></td>
+                    <td>Sets text to <strong>Grand Finals</strong> in bright orange (Hex <code>#FF5500</code>).</td>
+                  </tr>
+                  <tr>
+                    <td><code>?fontstyle=strikethrough;</code></td>
+                    <td><code>?fontstyle=strikethrough;Eliminated</code></td>
+                    <td>Sets font style to strikethrough.</td>
+                  </tr>
+                  <tr>
+                    <td><code>?fontstyle=underline;</code></td>
+                    <td><code>?fontstyle=underline;Champion</code></td>
+                    <td>Sets font style to underline.</td>
+                  </tr>
+                  <tr>
+                    <td><code>?hide;</code></td>
+                    <td><code>?hide;Optional Subtitle</code></td>
+                    <td>Sets source visibility to <strong>Hidden (Disabled)</strong> with the given text/image/switcher.</td>
+                  </tr>
+                  <tr>
+                    <td><code>?show;</code></td>
+                    <td><code>?show;Live Subtitle</code></td>
+                    <td>Sets source visibility to <strong>Visible (Enabled)</strong> with the given text/image/switcher.</td>
+                  </tr>
+                  <tr>
+                    <td><code>;;</code> (Double Semicolon)</td>
+                    <td><code>Cam A;; Cam B;; Cam C</code></td>
+                    <td>Splits multiple scene/source names into playlist items for <strong>SourceSwitcher</strong> sources. Comma-safe.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- IMPORT CONFIG MODAL -->
+    <div id="importModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Import Configuration / Profile</h3>
+          <button id="btnCloseImportModal" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">Upload a <code>.json</code> config file or paste shared configuration JSON below:</p>
+          
+          <div class="modal-file-upload">
+            <input type="file" id="importFileInput" accept=".json,application/json" class="file-input-hidden">
+            <button id="btnBrowseFile" class="btn btn-secondary btn-full">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Choose .json File from Computer</span>
+            </button>
+          </div>
+
+          <div class="modal-divider"><span>OR PASTE JSON</span></div>
+
+          <div class="form-group">
+            <textarea id="importJsonText" class="textarea-mono" rows="8" placeholder='Paste JSON here (e.g. {"sheetId": "...", "tabname": "CCS1", ...})'></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="importProfileNameOverride">Profile Name (Optional override):</label>
+            <input type="text" id="importProfileNameOverride" placeholder="Leave empty to use name from file">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btnCancelImport" class="btn btn-outline">Cancel</button>
+          <button id="btnConfirmImport" class="btn btn-primary">Import & Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VALUE DETAILS POPUP MODAL -->
+    <div id="valueDetailsModal" class="modal-overlay hidden">
+      <div class="modal-card modal-value-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <svg class="modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <h3 id="valModalTitle">Cell Value Details</h3>
+          </div>
+          <button type="button" class="modal-close-btn" id="btnCloseValModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="val-modal-meta-grid">
+            <div class="meta-field">
+              <span class="meta-k">Source / Label:</span>
+              <span class="meta-v font-mono" id="valModalSource">-</span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-k">Scene / Row:</span>
+              <span class="meta-v" id="valModalSceneRow">-</span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-k">Source Type:</span>
+              <span class="meta-v" id="valModalType">-</span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-k">Active Tags:</span>
+              <span class="meta-v" id="valModalTags">None</span>
+            </div>
+          </div>
+
+          <div class="val-content-section">
+            <div class="section-label-bar">
+              <span>Full Cell Content / Raw Expression:</span>
+              <button type="button" class="btn-copy-name" id="btnCopyValRaw" title="Copy raw value to clipboard">
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy Raw</span>
+              </button>
+            </div>
+            <textarea id="valModalRawText" class="val-textarea font-mono" readonly rows="4"></textarea>
+          </div>
+
+          <div class="val-content-section" id="valModalParsedSection">
+            <div class="section-label-bar">
+              <span>Parsed Value Sent to OBS:</span>
+              <button type="button" class="btn-copy-name" id="btnCopyValClean" title="Copy parsed clean value to clipboard">
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy Parsed</span>
+              </button>
+            </div>
+            <div id="valModalCleanDisplay" class="val-clean-box font-mono"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnCloseValModalFooter">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="toast-container"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

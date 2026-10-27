@@ -1,0 +1,22 @@
+{
+  "activeProfile": "Default",
+  "profiles": {
+    "Default": {
+      "sheetId": "",
+      "tabname": "Interface",
+      "range": "C2:D",
+      "dimension": "COLUMNS",
+      "apikey": "",
+      "obsaddress": "ws://localhost:4455",
+      "obsauth": "",
+      "polling": 2000,
+      "autoStart": false,
+      "logVisibilityOnlyOnChanges": true,
+      "showVisibilityLogs": true,
+      "logMissingRowsOnlyOnChanges": true,
+      "showMissingRowLogs": false
+    }
+  },
+  "minimizeToTray": false,
+  "theme": "dark"
+}

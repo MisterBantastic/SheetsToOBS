@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SheetsToOBS Control Sheet</title>
+  <meta name="description" content="Live web control sheet for the SheetsToOBS Stream tabs: reads the Google Sheet and writes operator edits back.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="alternate icon" type="image/png" href="SheetsToOBS_Logo.png">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="SheetsToOBS_Logo.png" alt="" class="brand-logo">
+      <div>
+        <div class="brand-name">SheetsToOBS <span class="brand-sub">Control Sheet</span> <span class="brand-sub" style="color:#f59e0b" title="Still being tested. Use a copy of your sheet.">EXPERIMENTAL</span></div>
+        <div class="brand-meta" id="sheetMeta">Loading layout…</div>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <label class="tab-picker">
+        <span class="sr-only">Control tab</span>
+        <select id="tabSelect" aria-label="Control tab"></select>
+      </label>
+      <div class="view-switch" id="viewSwitch" role="group" aria-label="Layout"></div>
+      <span id="modeBadge" class="mode-badge mode-offline" title="">OFFLINE</span>
+      <span id="freshness" class="freshness" title="Time since the sheet was last read">—</span>
+    </div>
+
+    <div class="topbar-right">
+      <span class="pill" id="pillObs" title="OBS WebSocket"><span class="dot"></span><span class="pill-label">OBS</span><span class="pill-val" id="obsVal">—</span></span>
+      <span class="pill" id="pillEngine" title="Sync engine"><span class="dot"></span><span class="pill-label">Sync</span><span class="pill-val" id="engineVal">—</span></span>
+      <button class="btn btn-ghost" id="btnRefresh" title="Re-read the sheet now (R)">↻ Refresh</button>
+      <button class="btn btn-ghost local-only" id="btnLiveStats" hidden>↻ Live stats</button>
+      <button class="btn btn-ghost local-only" id="btnSyncNow" title="Push sheet to OBS now">Sync to OBS</button>
+      <button class="btn btn-engine local-only" id="btnEngine" title="Start / stop the sync engine">Start engine</button>
+      <button class="btn btn-icon" id="btnSettings" title="Connection settings" aria-label="Connection settings">⚙</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner hidden" role="status"></div>
+
+  <nav class="ribbon" id="ribbon" aria-label="Sections"></nav>
+
+  <div class="layout">
+    <main id="sections" class="sections" aria-live="off">
+      <div class="empty-state" id="emptyState">Loading control sheet…</div>
+    </main>
+
+    <aside class="side">
+      <section class="panel" id="panelScripts">
+        <h2 class="panel-title">Apps Script imports</h2>
+        <p class="panel-hint" id="scriptsHint">Needs the Apps Script bridge.</p>
+        <div class="script-list" id="scriptList"></div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Recent edits</h2>
+        <ol class="edit-log" id="editLog"><li class="muted">No edits yet this session.</li></ol>
+      </section>
+
+      <section class="panel panel-grow">
+        <div class="panel-head">
+          <h2 class="panel-title">OBS sources <span class="count" id="srcCount">0</span></h2>
+          <input id="srcFilter" class="input input-sm" type="search" placeholder="Filter" aria-label="Filter OBS sources">
+        </div>
+        <div class="src-list" id="srcList"><div class="muted">Start the sync engine to see mapped sources.</div></div>
+      </section>
+
+      <section class="panel panel-grow">
+        <div class="panel-head">
+          <h2 class="panel-title">Engine log</h2>
+          <button class="btn btn-xs btn-ghost" id="btnClearLog">Clear</button>
+        </div>
+        <div class="log" id="log"></div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- Settings drawer -->
+  <div class="drawer-backdrop hidden" id="drawerBackdrop"></div>
+  <aside class="drawer hidden" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+    <div class="drawer-head">
+      <h2 id="drawerTitle">Control sheet connection</h2>
+      <button class="btn btn-icon" id="btnCloseDrawer" aria-label="Close">✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="callout">
+        <strong>Read-only</strong> works with the Sheet ID + API key from the main app.
+        <strong>Editing</strong> needs the Apps Script bridge (not published yet).
+        Try it on a <em>copy</em> of the production sheet first.
+      </div>
+
+      <label class="form-row">
+        <span>Default control tab</span>
+        <input class="input" id="setTab" placeholder="Stream1">
+      </label>
+      <label class="form-row">
+        <span>Apps Script Web App URL</span>
+        <input class="input" id="setUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="form-row">
+        <span>Bridge token <small id="tokenState" class="muted"></small></span>
+        <input class="input" id="setToken" type="password" placeholder="Leave empty to keep the saved token" autocomplete="off">
+      </label>
+      <label class="form-row">
+        <span>Refresh every (seconds)</span>
+        <input class="input" id="setPoll" type="number" min="2" max="60" step="1">
+      </label>
+      <label class="switch-row">
+        <input type="checkbox" id="setLan">
+        <span>Allow other devices on my network to open this dashboard and edit the control tab</span>
+      </label>
+      <div class="lan-urls" id="lanUrls"></div>
+
+      <div class="drawer-actions">
+        <button class="btn btn-primary" id="btnSaveSettings">Save</button>
+        <button class="btn btn-ghost" id="btnTestBridge">Test bridge</button>
+        <button class="btn btn-ghost btn-danger" id="btnDisconnect">Disconnect bridge</button>
+      </div>
+      <div class="test-result" id="testResult"></div>
+
+      <details class="howto">
+        <summary>How to set up the bridge</summary>
+        <ol>
+          <li>Make a copy of the production sheet (File › Make a copy) and open its Apps Script editor.</li>
+          <li>Replace <code>Code.gs</code> with the reviewed version and add <code>WebApp.gs</code> from the <code>apps-script</code> folder.</li>
+          <li>Run <code>setupControlBridge</code> once and copy the token from the execution log.</li>
+          <li>Deploy › New deployment › Web app · Execute as <em>Me</em> · Access <em>Anyone</em>.</li>
+          <li>Paste the <code>/exec</code> URL and token here, then press Test bridge.</li>
+        </ol>
+      </details>
+    </div>
+  </aside>
+
+  <datalist id="championList"></datalist>
+  <script src="dashboard.js"></script>
+</body>
+</html>

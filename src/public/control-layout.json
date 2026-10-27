@@ -1,0 +1,4271 @@
+{
+  "version": 2,
+  "name": "CCS Stream control tab",
+  "readRange": "A1:AA155",
+  "tabs": [
+    "Stream1",
+    "Stream2"
+  ],
+  "sections": [
+    {
+      "id": "match",
+      "title": "Stream Info & Teams",
+      "color": "purple",
+      "range": "A1:Z19",
+      "groups": [
+        {
+          "kind": "fields",
+          "title": "Broadcast",
+          "fields": [
+            {
+              "cell": "B3",
+              "type": "select",
+              "label": "League"
+            },
+            {
+              "cell": "B6",
+              "type": "text",
+              "label": "Week"
+            },
+            {
+              "cell": "G6",
+              "type": "text",
+              "label": "Call time"
+            },
+            {
+              "cell": "Q6",
+              "type": "text",
+              "label": "Stream start"
+            },
+            {
+              "cell": "V6",
+              "type": "select",
+              "label": "Channel",
+              "options": [
+                "CCS_LOL",
+                "CCS2_LOL",
+                "Mint Esports",
+                "Blank"
+              ]
+            },
+            {
+              "cell": "L6",
+              "type": "url",
+              "label": "Preshow link"
+            }
+          ]
+        },
+        {
+          "kind": "scoreboard",
+          "title": "Series",
+          "team1": {
+            "name": {
+              "cell": "G3",
+              "type": "select",
+              "label": "Team one"
+            },
+            "code": {
+              "cell": "B12",
+              "type": "readonly"
+            },
+            "score": {
+              "cell": "O3",
+              "type": "select",
+              "label": "Score",
+              "options": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ]
+            }
+          },
+          "team2": {
+            "name": {
+              "cell": "S3",
+              "type": "select",
+              "label": "Team two"
+            },
+            "code": {
+              "cell": "Y12",
+              "type": "readonly"
+            },
+            "score": {
+              "cell": "Q3",
+              "type": "select",
+              "label": "Score",
+              "options": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ]
+            }
+          }
+        },
+        {
+          "kind": "table",
+          "title": "Rosters & subs",
+          "columns": [
+            "Role",
+            "Team one player",
+            "T1 sub?",
+            "T1 sub name",
+            "T2 sub name",
+            "T2 sub?",
+            "Team two player"
+          ],
+          "rows": [
+            [
+              {
+                "static": "TOP"
+              },
+              {
+                "cell": "C14",
+                "type": "readonly"
+              },
+              {
+                "cell": "G14",
+                "type": "bool"
+              },
+              {
+                "cell": "I14",
+                "type": "select"
+              },
+              {
+                "cell": "O14",
+                "type": "select"
+              },
+              {
+                "cell": "T14",
+                "type": "bool"
+              },
+              {
+                "cell": "V14",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "JUNGLE"
+              },
+              {
+                "cell": "C15",
+                "type": "readonly"
+              },
+              {
+                "cell": "G15",
+                "type": "bool"
+              },
+              {
+                "cell": "I15",
+                "type": "select"
+              },
+              {
+                "cell": "O15",
+                "type": "select"
+              },
+              {
+                "cell": "T15",
+                "type": "bool"
+              },
+              {
+                "cell": "V15",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "MID"
+              },
+              {
+                "cell": "C16",
+                "type": "readonly"
+              },
+              {
+                "cell": "G16",
+                "type": "bool"
+              },
+              {
+                "cell": "I16",
+                "type": "select"
+              },
+              {
+                "cell": "O16",
+                "type": "select"
+              },
+              {
+                "cell": "T16",
+                "type": "bool"
+              },
+              {
+                "cell": "V16",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "BOT"
+              },
+              {
+                "cell": "C17",
+                "type": "readonly"
+              },
+              {
+                "cell": "G17",
+                "type": "bool"
+              },
+              {
+                "cell": "I17",
+                "type": "select"
+              },
+              {
+                "cell": "O17",
+                "type": "select"
+              },
+              {
+                "cell": "T17",
+                "type": "bool"
+              },
+              {
+                "cell": "V17",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "SUPPORT"
+              },
+              {
+                "cell": "C18",
+                "type": "readonly"
+              },
+              {
+                "cell": "G18",
+                "type": "bool"
+              },
+              {
+                "cell": "I18",
+                "type": "select"
+              },
+              {
+                "cell": "O18",
+                "type": "select"
+              },
+              {
+                "cell": "T18",
+                "type": "bool"
+              },
+              {
+                "cell": "V18",
+                "type": "readonly"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ingame",
+      "title": "In-Game Team Info",
+      "color": "redblue",
+      "range": "A20:Z35",
+      "groups": [
+        {
+          "kind": "fields",
+          "title": "Sides",
+          "fields": [
+            {
+              "cell": "B27",
+              "type": "bool",
+              "label": "Switch sides",
+              "hint": "Swaps which team is shown on red/blue"
+            }
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Red side",
+          "accent": "red",
+          "meta": [
+            {
+              "cell": "G21",
+              "type": "readonly",
+              "label": "Team"
+            },
+            {
+              "cell": "N21",
+              "type": "readonly",
+              "label": "Code"
+            },
+            {
+              "cell": "Q21",
+              "type": "readonly",
+              "label": "Record"
+            },
+            {
+              "cell": "Q22",
+              "type": "readonly",
+              "label": "Overall"
+            }
+          ],
+          "columns": [
+            "Role",
+            "Player",
+            "Champion",
+            "KDA",
+            "Stat shown",
+            "Value"
+          ],
+          "rows": [
+            [
+              {
+                "static": "TOP"
+              },
+              {
+                "cell": "H23",
+                "type": "readonly"
+              },
+              {
+                "cell": "M23",
+                "type": "readonly"
+              },
+              {
+                "cell": "T23",
+                "type": "readonly"
+              },
+              {
+                "cell": "V23",
+                "type": "select"
+              },
+              {
+                "cell": "Y23",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "JUNGLE"
+              },
+              {
+                "cell": "H24",
+                "type": "readonly"
+              },
+              {
+                "cell": "M24",
+                "type": "readonly"
+              },
+              {
+                "cell": "T24",
+                "type": "readonly"
+              },
+              {
+                "cell": "V24",
+                "type": "select"
+              },
+              {
+                "cell": "Y24",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "MID"
+              },
+              {
+                "cell": "H25",
+                "type": "readonly"
+              },
+              {
+                "cell": "M25",
+                "type": "readonly"
+              },
+              {
+                "cell": "T25",
+                "type": "readonly"
+              },
+              {
+                "cell": "V25",
+                "type": "select"
+              },
+              {
+                "cell": "Y25",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "BOT"
+              },
+              {
+                "cell": "H26",
+                "type": "readonly"
+              },
+              {
+                "cell": "M26",
+                "type": "readonly"
+              },
+              {
+                "cell": "T26",
+                "type": "readonly"
+              },
+              {
+                "cell": "V26",
+                "type": "select"
+              },
+              {
+                "cell": "Y26",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "SUPPORT"
+              },
+              {
+                "cell": "H27",
+                "type": "readonly"
+              },
+              {
+                "cell": "M27",
+                "type": "readonly"
+              },
+              {
+                "cell": "T27",
+                "type": "readonly"
+              },
+              {
+                "cell": "V27",
+                "type": "select"
+              },
+              {
+                "cell": "Y27",
+                "type": "readonly"
+              }
+            ]
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Blue side",
+          "accent": "blue",
+          "meta": [
+            {
+              "cell": "G28",
+              "type": "readonly",
+              "label": "Team"
+            },
+            {
+              "cell": "N28",
+              "type": "readonly",
+              "label": "Code"
+            },
+            {
+              "cell": "Q28",
+              "type": "readonly",
+              "label": "Record"
+            },
+            {
+              "cell": "Q29",
+              "type": "readonly",
+              "label": "Overall"
+            }
+          ],
+          "columns": [
+            "Role",
+            "Player",
+            "Champion",
+            "KDA",
+            "Stat shown",
+            "Value"
+          ],
+          "rows": [
+            [
+              {
+                "static": "TOP"
+              },
+              {
+                "cell": "H30",
+                "type": "readonly"
+              },
+              {
+                "cell": "M30",
+                "type": "readonly"
+              },
+              {
+                "cell": "T30",
+                "type": "readonly"
+              },
+              {
+                "cell": "V30",
+                "type": "select"
+              },
+              {
+                "cell": "Y30",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "JUNGLE"
+              },
+              {
+                "cell": "H31",
+                "type": "readonly"
+              },
+              {
+                "cell": "M31",
+                "type": "readonly"
+              },
+              {
+                "cell": "T31",
+                "type": "readonly"
+              },
+              {
+                "cell": "V31",
+                "type": "select"
+              },
+              {
+                "cell": "Y31",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "MID"
+              },
+              {
+                "cell": "H32",
+                "type": "readonly"
+              },
+              {
+                "cell": "M32",
+                "type": "readonly"
+              },
+              {
+                "cell": "T32",
+                "type": "readonly"
+              },
+              {
+                "cell": "V32",
+                "type": "select"
+              },
+              {
+                "cell": "Y32",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "BOT"
+              },
+              {
+                "cell": "H33",
+                "type": "readonly"
+              },
+              {
+                "cell": "M33",
+                "type": "readonly"
+              },
+              {
+                "cell": "T33",
+                "type": "readonly"
+              },
+              {
+                "cell": "V33",
+                "type": "select"
+              },
+              {
+                "cell": "Y33",
+                "type": "readonly"
+              }
+            ],
+            [
+              {
+                "static": "SUPPORT"
+              },
+              {
+                "cell": "H34",
+                "type": "readonly"
+              },
+              {
+                "cell": "M34",
+                "type": "readonly"
+              },
+              {
+                "cell": "T34",
+                "type": "readonly"
+              },
+              {
+                "cell": "V34",
+                "type": "select"
+              },
+              {
+                "cell": "Y34",
+                "type": "readonly"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "draft",
+      "title": "Auto Draft",
+      "color": "crimson",
+      "range": "A37:Z71",
+      "note": "Draft is driven by Drafter.lol. Only fill overrides if Drafter.lol fails.",
+      "groups": [
+        {
+          "kind": "fields",
+          "title": "Draft session",
+          "fields": [
+            {
+              "cell": "F38",
+              "type": "url",
+              "label": "Drafter.lol link"
+            },
+            {
+              "cell": "F39",
+              "type": "select",
+              "label": "Best of",
+              "options": [
+                "BO3",
+                "BO5"
+              ]
+            },
+            {
+              "cell": "F40",
+              "type": "select",
+              "label": "Game #",
+              "options": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ]
+            },
+            {
+              "cell": "O41",
+              "type": "bool",
+              "label": "Focus image"
+            },
+            {
+              "cell": "R41",
+              "type": "bool",
+              "label": "Focus model"
+            },
+            {
+              "cell": "U41",
+              "type": "bool",
+              "label": "Focus stats"
+            },
+            {
+              "cell": "X41",
+              "type": "select",
+              "label": "Animation",
+              "options": [
+                "idle",
+                "dance",
+                "joke",
+                "taunt"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Final order",
+          "columns": [
+            {
+              "label": "#"
+            },
+            {
+              "cell": "B44",
+              "label": "Blue"
+            },
+            {
+              "cell": "M44",
+              "label": "Red"
+            }
+          ],
+          "rows": [
+            [
+              {
+                "static": "1"
+              },
+              {
+                "cell": "D44",
+                "type": "champion"
+              },
+              {
+                "cell": "H44",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "2"
+              },
+              {
+                "cell": "D45",
+                "type": "champion"
+              },
+              {
+                "cell": "H45",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "3"
+              },
+              {
+                "cell": "D46",
+                "type": "champion"
+              },
+              {
+                "cell": "H46",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "4"
+              },
+              {
+                "cell": "D47",
+                "type": "champion"
+              },
+              {
+                "cell": "H47",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "5"
+              },
+              {
+                "cell": "D48",
+                "type": "champion"
+              },
+              {
+                "cell": "H48",
+                "type": "champion"
+              }
+            ]
+          ],
+          "toggle": {
+            "cell": "L43",
+            "type": "bool",
+            "label": "Show"
+          }
+        },
+        {
+          "kind": "table",
+          "title": "Bans override",
+          "columns": [
+            {
+              "label": "#"
+            },
+            {
+              "cell": "O44",
+              "label": "Blue"
+            },
+            {
+              "cell": "Z44",
+              "label": "Red"
+            }
+          ],
+          "rows": [
+            [
+              {
+                "static": "1"
+              },
+              {
+                "cell": "Q44",
+                "type": "champion"
+              },
+              {
+                "cell": "U44",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "2"
+              },
+              {
+                "cell": "Q45",
+                "type": "champion"
+              },
+              {
+                "cell": "U45",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "3"
+              },
+              {
+                "cell": "Q46",
+                "type": "champion"
+              },
+              {
+                "cell": "U46",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "4"
+              },
+              {
+                "cell": "Q47",
+                "type": "champion"
+              },
+              {
+                "cell": "U47",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "5"
+              },
+              {
+                "cell": "Q48",
+                "type": "champion"
+              },
+              {
+                "cell": "U48",
+                "type": "champion"
+              }
+            ]
+          ],
+          "toggle": {
+            "cell": "Y43",
+            "type": "bool",
+            "label": "Override"
+          }
+        },
+        {
+          "kind": "table",
+          "title": "Custom skins",
+          "columns": [
+            {
+              "label": "#"
+            },
+            {
+              "cell": "B44",
+              "label": "Blue"
+            },
+            {
+              "cell": "M44",
+              "label": "Red"
+            }
+          ],
+          "rows": [
+            [
+              {
+                "static": "1"
+              },
+              {
+                "cell": "C51",
+                "type": "select"
+              },
+              {
+                "cell": "H51",
+                "type": "select"
+              }
+            ],
+            [
+              {
+                "static": "2"
+              },
+              {
+                "cell": "C52",
+                "type": "select"
+              },
+              {
+                "cell": "H52",
+                "type": "select",
+                "optionsFrom": "{tab}BTS!O2:O181"
+              }
+            ],
+            [
+              {
+                "static": "3"
+              },
+              {
+                "cell": "C53",
+                "type": "select"
+              },
+              {
+                "cell": "H53",
+                "type": "select",
+                "optionsFrom": "{tab}BTS!P2:P181"
+              }
+            ],
+            [
+              {
+                "static": "4"
+              },
+              {
+                "cell": "C54",
+                "type": "select"
+              },
+              {
+                "cell": "H54",
+                "type": "select",
+                "optionsFrom": "{tab}BTS!Q2:Q181"
+              }
+            ],
+            [
+              {
+                "static": "5"
+              },
+              {
+                "cell": "C55",
+                "type": "select"
+              },
+              {
+                "cell": "H55",
+                "type": "select",
+                "optionsFrom": "{tab}BTS!R2:R181"
+              }
+            ]
+          ],
+          "toggle": {
+            "cell": "L50",
+            "type": "bool",
+            "label": "Use"
+          }
+        },
+        {
+          "kind": "table",
+          "title": "Draft order override",
+          "columns": [
+            {
+              "label": "#"
+            },
+            {
+              "cell": "O51",
+              "label": "Blue"
+            },
+            {
+              "cell": "Z51",
+              "label": "Red"
+            }
+          ],
+          "rows": [
+            [
+              {
+                "static": "1"
+              },
+              {
+                "cell": "Q51",
+                "type": "champion"
+              },
+              {
+                "cell": "U51",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "2"
+              },
+              {
+                "cell": "Q52",
+                "type": "champion"
+              },
+              {
+                "cell": "U52",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "3"
+              },
+              {
+                "cell": "Q53",
+                "type": "champion"
+              },
+              {
+                "cell": "U53",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "4"
+              },
+              {
+                "cell": "Q54",
+                "type": "champion"
+              },
+              {
+                "cell": "U54",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "5"
+              },
+              {
+                "cell": "Q55",
+                "type": "champion"
+              },
+              {
+                "cell": "U55",
+                "type": "champion"
+              }
+            ]
+          ],
+          "toggle": {
+            "cell": "Y50",
+            "type": "bool",
+            "label": "Override"
+          }
+        },
+        {
+          "kind": "table",
+          "title": "Fearless: game 1",
+          "columns": [
+            {
+              "label": "#"
+            },
+            {
+              "cell": "B59",
+              "label": "Blue"
+            },
+            {
+              "cell": "M59",
+              "label": "Red"
+            }
+          ],
+          "rows": [
+            [
+              {
+                "static": "1"
+              },
+              {
+                "cell": "D59",
+                "type": "champion"
+              },
+              {
+                "cell": "H59",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "2"
+              },
+              {
+                "cell": "D60",
+                "type": "champion"
+              },
+              {
+                "cell": "H60",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "3"
+              },
+              {
+                "cell": "D61",
+                "type": "champion"
+              },
+              {
+                "cell": "H61",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "4"
+              },
+              {
+                "cell": "D62",
+                "type": "champion"
+              },
+              {
+                "cell": "H62",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "5"
+              },
+              {
+                "cell": "D63",
+                "type": "champion"
+              },
+              {
+                "cell": "H63",
+                "type": "champion"
+              }
+            ]
+          ],
+          "toggle": {
+            "cell": "L58",
+            "type": "bool",
+            "label": "Override"
+          }
+        },
+        {
+          "kind": "table",
+          "title": "Fearless: game 2",
+          "columns": [
+            {
+              "label": "#"
+            },
+            {
+              "cell": "B66",
+              "label": "Blue"
+            },
+            {
+              "cell": "M66",
+              "label": "Red"
+            }
+          ],
+          "rows": [
+            [
+              {
+                "static": "1"
+              },
+              {
+                "cell": "D66",
+                "type": "champion"
+              },
+              {
+                "cell": "H66",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "2"
+              },
+              {
+                "cell": "D67",
+                "type": "champion"
+              },
+              {
+                "cell": "H67",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "3"
+              },
+              {
+                "cell": "D68",
+                "type": "champion"
+              },
+              {
+                "cell": "H68",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "4"
+              },
+              {
+                "cell": "D69",
+                "type": "champion"
+              },
+              {
+                "cell": "H69",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "5"
+              },
+              {
+                "cell": "D70",
+                "type": "champion"
+              },
+              {
+                "cell": "H70",
+                "type": "champion"
+              }
+            ]
+          ],
+          "toggle": {
+            "cell": "L65",
+            "type": "bool",
+            "label": "Override"
+          }
+        },
+        {
+          "kind": "table",
+          "title": "Fearless: game 3",
+          "columns": [
+            {
+              "label": "#"
+            },
+            {
+              "cell": "O59",
+              "label": "Blue"
+            },
+            {
+              "cell": "Z59",
+              "label": "Red"
+            }
+          ],
+          "rows": [
+            [
+              {
+                "static": "1"
+              },
+              {
+                "cell": "Q59",
+                "type": "champion"
+              },
+              {
+                "cell": "U59",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "2"
+              },
+              {
+                "cell": "Q60",
+                "type": "champion"
+              },
+              {
+                "cell": "U60",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "3"
+              },
+              {
+                "cell": "Q61",
+                "type": "champion"
+              },
+              {
+                "cell": "U61",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "4"
+              },
+              {
+                "cell": "Q62",
+                "type": "champion"
+              },
+              {
+                "cell": "U62",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "5"
+              },
+              {
+                "cell": "Q63",
+                "type": "champion"
+              },
+              {
+                "cell": "U63",
+                "type": "champion"
+              }
+            ]
+          ],
+          "toggle": {
+            "cell": "Y58",
+            "type": "bool",
+            "label": "Override"
+          }
+        },
+        {
+          "kind": "table",
+          "title": "Fearless: game 4",
+          "columns": [
+            {
+              "label": "#"
+            },
+            {
+              "cell": "O66",
+              "label": "Blue"
+            },
+            {
+              "cell": "Z66",
+              "label": "Red"
+            }
+          ],
+          "rows": [
+            [
+              {
+                "static": "1"
+              },
+              {
+                "cell": "Q66",
+                "type": "champion"
+              },
+              {
+                "cell": "U66",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "2"
+              },
+              {
+                "cell": "Q67",
+                "type": "champion"
+              },
+              {
+                "cell": "U67",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "3"
+              },
+              {
+                "cell": "Q68",
+                "type": "champion"
+              },
+              {
+                "cell": "U68",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "4"
+              },
+              {
+                "cell": "Q69",
+                "type": "champion"
+              },
+              {
+                "cell": "U69",
+                "type": "champion"
+              }
+            ],
+            [
+              {
+                "static": "5"
+              },
+              {
+                "cell": "Q70",
+                "type": "champion"
+              },
+              {
+                "cell": "U70",
+                "type": "champion"
+              }
+            ]
+          ],
+          "toggle": {
+            "cell": "Y65",
+            "type": "bool",
+            "label": "Override"
+          }
+        }
+      ]
+    },
+    {
+      "id": "prod",
+      "title": "Prod Interactions",
+      "color": "green",
+      "range": "A73:Z88",
+      "groups": [
+        {
+          "kind": "fields",
+          "title": "Ragebait",
+          "toggle": {
+            "cell": "L74",
+            "type": "bool",
+            "label": "On air"
+          },
+          "fields": [
+            {
+              "cell": "E76",
+              "type": "text",
+              "label": "Username"
+            },
+            {
+              "cell": "E77",
+              "type": "textarea",
+              "label": "Message"
+            }
+          ]
+        },
+        {
+          "kind": "fields",
+          "title": "Overlays",
+          "fields": [
+            {
+              "cell": "N75",
+              "type": "select",
+              "label": "In-game model"
+            },
+            {
+              "cell": "T75",
+              "type": "bool",
+              "label": "Model on air"
+            },
+            {
+              "cell": "N78",
+              "type": "select",
+              "label": "Player highlight",
+              "optionsFrom": "{tab}BTS!B2:C11"
+            },
+            {
+              "cell": "T78",
+              "type": "bool",
+              "label": "Highlight on air"
+            },
+            {
+              "cell": "Y74",
+              "type": "bool",
+              "label": "Elder timers"
+            },
+            {
+              "cell": "Y76",
+              "type": "bool",
+              "label": "Going Goldyn"
+            },
+            {
+              "cell": "Y78",
+              "type": "bool",
+              "label": "In-game scores"
+            },
+            {
+              "cell": "P81",
+              "type": "select",
+              "label": "Break icon"
+            }
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Emotes",
+          "columns": [
+            "Slot",
+            "Emote",
+            "On air"
+          ],
+          "rows": [
+            [
+              {
+                "static": "Start/End"
+              },
+              {
+                "cell": "B81",
+                "type": "select"
+              },
+              {
+                "cell": "G80",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "Draft"
+              },
+              {
+                "cell": "I81",
+                "type": "select"
+              },
+              {
+                "cell": "N80",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "Break 1"
+              },
+              {
+                "cell": "B84",
+                "type": "select"
+              },
+              {
+                "cell": "G83",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "Break 2"
+              },
+              {
+                "cell": "I84",
+                "type": "select"
+              },
+              {
+                "cell": "N83",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "Break 3"
+              },
+              {
+                "cell": "P84",
+                "type": "select"
+              },
+              {
+                "cell": "U83",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "Desk"
+              },
+              {
+                "cell": "B87",
+                "type": "select"
+              },
+              {
+                "cell": "G86",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "In game"
+              },
+              {
+                "cell": "I87",
+                "type": "select"
+              },
+              {
+                "cell": "N86",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "Hidden"
+              },
+              {
+                "cell": "P87",
+                "type": "select"
+              },
+              {
+                "cell": "U86",
+                "type": "bool"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "talent",
+      "title": "Talent & Feeds",
+      "color": "magenta",
+      "range": "A89:Z139",
+      "groups": [
+        {
+          "kind": "table",
+          "title": "Interview",
+          "columns": [
+            "Slot",
+            "Role",
+            "Name",
+            "Camera link",
+            "Image override",
+            "Social override",
+            "Screen / feed",
+            "Show"
+          ],
+          "rows": [
+            [
+              {
+                "static": "Interview"
+              },
+              {
+                "cell": "F90",
+                "type": "readonly"
+              },
+              {
+                "cell": "F92",
+                "type": "select"
+              },
+              {
+                "cell": "Q90",
+                "type": "url"
+              },
+              {
+                "cell": "Q91",
+                "type": "url"
+              },
+              {
+                "cell": "Q92",
+                "type": "text"
+              },
+              {
+                "cell": "Q93",
+                "type": "url"
+              },
+              {
+                "cell": "Z93",
+                "type": "bool"
+              }
+            ]
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Main talent",
+          "columns": [
+            "Slot",
+            "Role",
+            "Name",
+            "Camera link",
+            "Image override",
+            "Social override",
+            "Screen / feed",
+            "Show"
+          ],
+          "rows": [
+            [
+              {
+                "static": "1"
+              },
+              {
+                "cell": "F97",
+                "type": "select"
+              },
+              {
+                "cell": "F99",
+                "type": "select"
+              },
+              {
+                "cell": "Q97",
+                "type": "url"
+              },
+              {
+                "cell": "Q98",
+                "type": "url"
+              },
+              {
+                "cell": "Q99",
+                "type": "text"
+              },
+              {
+                "cell": "Q100",
+                "type": "url"
+              },
+              {
+                "cell": "Z100",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "2"
+              },
+              {
+                "cell": "F101",
+                "type": "select"
+              },
+              {
+                "cell": "F103",
+                "type": "select"
+              },
+              {
+                "cell": "Q101",
+                "type": "url"
+              },
+              {
+                "cell": "Q102",
+                "type": "url"
+              },
+              {
+                "cell": "Q103",
+                "type": "text"
+              },
+              {
+                "cell": "Q104",
+                "type": "url"
+              },
+              {
+                "cell": "Z104",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "3"
+              },
+              {
+                "cell": "F105",
+                "type": "select"
+              },
+              {
+                "cell": "F107",
+                "type": "select"
+              },
+              {
+                "cell": "Q105",
+                "type": "url"
+              },
+              {
+                "cell": "Q106",
+                "type": "url"
+              },
+              {
+                "cell": "Q107",
+                "type": "text"
+              },
+              {
+                "cell": "Q108",
+                "type": "url"
+              },
+              {
+                "cell": "Z108",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "4"
+              },
+              {
+                "cell": "F109",
+                "type": "select"
+              },
+              {
+                "cell": "F111",
+                "type": "select"
+              },
+              {
+                "cell": "Q109",
+                "type": "url"
+              },
+              {
+                "cell": "Q110",
+                "type": "url"
+              },
+              {
+                "cell": "Q111",
+                "type": "text"
+              },
+              {
+                "cell": "Q112",
+                "type": "url"
+              },
+              {
+                "cell": "Z112",
+                "type": "bool"
+              }
+            ]
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Extra",
+          "toggle": {
+            "cell": "Y113",
+            "type": "bool",
+            "label": "Section on"
+          },
+          "columns": [
+            "Slot",
+            "Role",
+            "Name",
+            "Camera link",
+            "Image override",
+            "Social override",
+            "Screen / feed",
+            "Show"
+          ],
+          "rows": [
+            [
+              {
+                "static": "5"
+              },
+              {
+                "cell": "F114",
+                "type": "select"
+              },
+              {
+                "cell": "F116",
+                "type": "select"
+              },
+              {
+                "cell": "Q114",
+                "type": "url"
+              },
+              {
+                "cell": "Q115",
+                "type": "url"
+              },
+              {
+                "cell": "Q116",
+                "type": "text"
+              },
+              {
+                "cell": "Q117",
+                "type": "url"
+              },
+              {
+                "cell": "Z117",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "6"
+              },
+              {
+                "cell": "F118",
+                "type": "select"
+              },
+              {
+                "cell": "F120",
+                "type": "select"
+              },
+              {
+                "cell": "Q118",
+                "type": "url"
+              },
+              {
+                "cell": "Q119",
+                "type": "url"
+              },
+              {
+                "cell": "Q120",
+                "type": "text"
+              },
+              {
+                "cell": "Q121",
+                "type": "url"
+              },
+              {
+                "cell": "Z121",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "7"
+              },
+              {
+                "cell": "F122",
+                "type": "select"
+              },
+              {
+                "cell": "F124",
+                "type": "select"
+              },
+              {
+                "cell": "Q122",
+                "type": "url"
+              },
+              {
+                "cell": "Q123",
+                "type": "url"
+              },
+              {
+                "cell": "Q124",
+                "type": "text"
+              },
+              {
+                "cell": "Q125",
+                "type": "url"
+              },
+              {
+                "cell": "Z125",
+                "type": "bool"
+              }
+            ]
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Analyst desk",
+          "toggle": {
+            "cell": "Y126",
+            "type": "bool",
+            "label": "Section on"
+          },
+          "columns": [
+            "Slot",
+            "Role",
+            "Name",
+            "Camera link",
+            "Image override",
+            "Social override",
+            "Screen / feed",
+            "Show"
+          ],
+          "rows": [
+            [
+              {
+                "static": "8"
+              },
+              {
+                "cell": "F127",
+                "type": "select"
+              },
+              {
+                "cell": "F129",
+                "type": "select"
+              },
+              {
+                "cell": "Q127",
+                "type": "url"
+              },
+              {
+                "cell": "Q128",
+                "type": "url"
+              },
+              {
+                "cell": "Q129",
+                "type": "text"
+              },
+              {
+                "cell": "Q130",
+                "type": "url"
+              },
+              {
+                "cell": "Z130",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "9"
+              },
+              {
+                "cell": "F131",
+                "type": "select"
+              },
+              {
+                "cell": "F133",
+                "type": "select"
+              },
+              {
+                "cell": "Q131",
+                "type": "url"
+              },
+              {
+                "cell": "Q132",
+                "type": "url"
+              },
+              {
+                "cell": "Q133",
+                "type": "text"
+              },
+              {
+                "cell": "Q134",
+                "type": "url"
+              },
+              {
+                "cell": "Z134",
+                "type": "bool"
+              }
+            ],
+            [
+              {
+                "static": "10"
+              },
+              {
+                "cell": "F135",
+                "type": "select"
+              },
+              {
+                "cell": "F137",
+                "type": "select"
+              },
+              {
+                "cell": "Q135",
+                "type": "url"
+              },
+              {
+                "cell": "Q136",
+                "type": "url"
+              },
+              {
+                "cell": "Q137",
+                "type": "text"
+              },
+              {
+                "cell": "Q138",
+                "type": "url"
+              },
+              {
+                "cell": "Z138",
+                "type": "bool"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kmk",
+      "title": "Kiss Marry Kill",
+      "color": "slate",
+      "range": "A141:Z152",
+      "groups": [
+        {
+          "kind": "fields",
+          "title": "View",
+          "fields": [
+            {
+              "cell": "B143",
+              "type": "select",
+              "label": "Character view",
+              "options": [
+                "Centered",
+                "Uncentered"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "table",
+          "title": "Picks",
+          "columns": [
+            "Champion",
+            "Skin",
+            {
+              "cell": "G143",
+              "label": "Talent 1"
+            },
+            {
+              "cell": "L143",
+              "label": "Talent 2"
+            },
+            {
+              "cell": "Q143",
+              "label": "Talent 3"
+            },
+            {
+              "cell": "V143",
+              "label": "Talent 4"
+            }
+          ],
+          "rows": [
+            [
+              {
+                "cell": "B144",
+                "type": "champion"
+              },
+              {
+                "cell": "B145",
+                "type": "select"
+              },
+              {
+                "cell": "G144",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              },
+              {
+                "cell": "L144",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              },
+              {
+                "cell": "Q144",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              },
+              {
+                "cell": "V144",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              }
+            ],
+            [
+              {
+                "cell": "B147",
+                "type": "champion"
+              },
+              {
+                "cell": "B148",
+                "type": "select"
+              },
+              {
+                "cell": "G147",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              },
+              {
+                "cell": "L147",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              },
+              {
+                "cell": "Q147",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              },
+              {
+                "cell": "V147",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              }
+            ],
+            [
+              {
+                "cell": "B150",
+                "type": "champion"
+              },
+              {
+                "cell": "B151",
+                "type": "select"
+              },
+              {
+                "cell": "G150",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              },
+              {
+                "cell": "L150",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              },
+              {
+                "cell": "Q150",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              },
+              {
+                "cell": "V150",
+                "type": "select",
+                "options": [
+                  "Kiss",
+                  "Marry",
+                  "Kill"
+                ]
+              }
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "tabLayouts": {
+    "Stream1": {
+      "note": "Stream tabs with the stats section: 45 rows were inserted at row 89 (Talent and KMK moved down).",
+      "insertRows": [
+        {
+          "at": 89,
+          "count": 45
+        }
+      ],
+      "readRange": "A1:AA197",
+      "addSections": [
+        {
+          "after": "prod",
+          "section": {
+            "id": "stats",
+            "title": "Live Stats & Matchups",
+            "color": "cyan",
+            "range": "A90:Z133",
+            "groups": [
+              {
+                "kind": "fields",
+                "title": "Live game (post-game scenes)",
+                "fields": [
+                  {
+                    "cell": "E93",
+                    "type": "select",
+                    "label": "Game #",
+                    "options": [
+                      "Latest",
+                      "1",
+                      "2",
+                      "3",
+                      "4",
+                      "5"
+                    ],
+                    "hint": "Latest = newest game of the series"
+                  },
+                  {
+                    "cell": "E91",
+                    "type": "readonly",
+                    "label": "Stats link"
+                  },
+                  {
+                    "cell": "D94",
+                    "type": "readonly",
+                    "label": "Winner"
+                  },
+                  {
+                    "cell": "H94",
+                    "type": "readonly",
+                    "label": "Time"
+                  },
+                  {
+                    "cell": "J91",
+                    "type": "readonly",
+                    "label": "Last refreshed"
+                  }
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Team info",
+                "columns": [
+                  "Side",
+                  "Team",
+                  {
+                    "cell": "O92",
+                    "label": "Stat 1"
+                  },
+                  {
+                    "cell": "Q92",
+                    "label": "Stat 2"
+                  },
+                  {
+                    "cell": "S92",
+                    "label": "Stat 3"
+                  }
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Blue"
+                    },
+                    {
+                      "cell": "M93",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O93",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "Q93",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "S93",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "Red"
+                    },
+                    {
+                      "cell": "M94",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O94",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "Q94",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "S94",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Red stats",
+                "columns": [
+                  "Role",
+                  "Player",
+                  "Champion",
+                  {
+                    "cell": "L97",
+                    "label": "Stat 1"
+                  },
+                  {
+                    "cell": "O97",
+                    "label": "Stat 2"
+                  },
+                  {
+                    "cell": "R97",
+                    "label": "Stat 3"
+                  },
+                  {
+                    "cell": "U97",
+                    "label": "Stat 4"
+                  },
+                  {
+                    "cell": "X97",
+                    "label": "Stat 5"
+                  }
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "TOP"
+                    },
+                    {
+                      "cell": "D98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X98",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "JUNGLE"
+                    },
+                    {
+                      "cell": "D99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X99",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "MIDDLE"
+                    },
+                    {
+                      "cell": "D100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X100",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "BOTTOM"
+                    },
+                    {
+                      "cell": "D101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X101",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "UTILITY"
+                    },
+                    {
+                      "cell": "D102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X102",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Blue stats",
+                "columns": [
+                  "Role",
+                  "Player",
+                  "Champion",
+                  {
+                    "cell": "L105",
+                    "label": "Stat 1"
+                  },
+                  {
+                    "cell": "O105",
+                    "label": "Stat 2"
+                  },
+                  {
+                    "cell": "R105",
+                    "label": "Stat 3"
+                  },
+                  {
+                    "cell": "U105",
+                    "label": "Stat 4"
+                  },
+                  {
+                    "cell": "X105",
+                    "label": "Stat 5"
+                  }
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "TOP"
+                    },
+                    {
+                      "cell": "D106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X106",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "JUNGLE"
+                    },
+                    {
+                      "cell": "D107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X107",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "MIDDLE"
+                    },
+                    {
+                      "cell": "D108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X108",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "BOTTOM"
+                    },
+                    {
+                      "cell": "D109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X109",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "UTILITY"
+                    },
+                    {
+                      "cell": "D110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X110",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Top matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "F114",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J114",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B115",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F115",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J115",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B116",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F116",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J116",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B117",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F117",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J117",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B118",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F118",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J118",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Bottom matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "S114",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W114",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O115",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S115",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W115",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O116",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S116",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W116",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O117",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S117",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W117",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O118",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S118",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W118",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Jungle matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "F121",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J121",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B122",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F122",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J122",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B123",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F123",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J123",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B124",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F124",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J124",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B125",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F125",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J125",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Support matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "S121",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W121",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O122",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S122",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W122",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O123",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S123",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W123",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O124",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S124",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W124",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O125",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S125",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W125",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Mid matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "F128",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J128",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B129",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F129",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J129",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B130",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F130",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J130",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B131",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F131",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J131",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B132",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F132",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J132",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Teams (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Teams"
+                    },
+                    {
+                      "cell": "S128",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W128",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O129",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!X2:X120"
+                    },
+                    {
+                      "cell": "S129",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W129",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O130",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!X2:X120"
+                    },
+                    {
+                      "cell": "S130",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W130",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O131",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!X2:X120"
+                    },
+                    {
+                      "cell": "S131",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W131",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O132",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!X2:X120"
+                    },
+                    {
+                      "cell": "S132",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W132",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Stream2": {
+      "note": "Stream tabs with the stats section: 45 rows were inserted at row 89 (Talent and KMK moved down).",
+      "insertRows": [
+        {
+          "at": 89,
+          "count": 45
+        }
+      ],
+      "readRange": "A1:AA197",
+      "addSections": [
+        {
+          "after": "prod",
+          "section": {
+            "id": "stats",
+            "title": "Live Stats & Matchups",
+            "color": "cyan",
+            "range": "A90:Z133",
+            "groups": [
+              {
+                "kind": "fields",
+                "title": "Live game (post-game scenes)",
+                "fields": [
+                  {
+                    "cell": "E93",
+                    "type": "select",
+                    "label": "Game #",
+                    "options": [
+                      "Latest",
+                      "1",
+                      "2",
+                      "3",
+                      "4",
+                      "5"
+                    ],
+                    "hint": "Latest = newest game of the series"
+                  },
+                  {
+                    "cell": "E91",
+                    "type": "readonly",
+                    "label": "Stats link"
+                  },
+                  {
+                    "cell": "D94",
+                    "type": "readonly",
+                    "label": "Winner"
+                  },
+                  {
+                    "cell": "H94",
+                    "type": "readonly",
+                    "label": "Time"
+                  },
+                  {
+                    "cell": "J91",
+                    "type": "readonly",
+                    "label": "Last refreshed"
+                  }
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Team info",
+                "columns": [
+                  "Side",
+                  "Team",
+                  {
+                    "cell": "O92",
+                    "label": "Stat 1"
+                  },
+                  {
+                    "cell": "Q92",
+                    "label": "Stat 2"
+                  },
+                  {
+                    "cell": "S92",
+                    "label": "Stat 3"
+                  }
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Blue"
+                    },
+                    {
+                      "cell": "M93",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O93",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "Q93",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "S93",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "Red"
+                    },
+                    {
+                      "cell": "M94",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O94",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "Q94",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "S94",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Red stats",
+                "columns": [
+                  "Role",
+                  "Player",
+                  "Champion",
+                  {
+                    "cell": "L97",
+                    "label": "Stat 1"
+                  },
+                  {
+                    "cell": "O97",
+                    "label": "Stat 2"
+                  },
+                  {
+                    "cell": "R97",
+                    "label": "Stat 3"
+                  },
+                  {
+                    "cell": "U97",
+                    "label": "Stat 4"
+                  },
+                  {
+                    "cell": "X97",
+                    "label": "Stat 5"
+                  }
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "TOP"
+                    },
+                    {
+                      "cell": "D98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U98",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X98",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "JUNGLE"
+                    },
+                    {
+                      "cell": "D99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U99",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X99",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "MIDDLE"
+                    },
+                    {
+                      "cell": "D100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U100",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X100",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "BOTTOM"
+                    },
+                    {
+                      "cell": "D101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U101",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X101",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "UTILITY"
+                    },
+                    {
+                      "cell": "D102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U102",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X102",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Blue stats",
+                "columns": [
+                  "Role",
+                  "Player",
+                  "Champion",
+                  {
+                    "cell": "L105",
+                    "label": "Stat 1"
+                  },
+                  {
+                    "cell": "O105",
+                    "label": "Stat 2"
+                  },
+                  {
+                    "cell": "R105",
+                    "label": "Stat 3"
+                  },
+                  {
+                    "cell": "U105",
+                    "label": "Stat 4"
+                  },
+                  {
+                    "cell": "X105",
+                    "label": "Stat 5"
+                  }
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "TOP"
+                    },
+                    {
+                      "cell": "D106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U106",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X106",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "JUNGLE"
+                    },
+                    {
+                      "cell": "D107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U107",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X107",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "MIDDLE"
+                    },
+                    {
+                      "cell": "D108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U108",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X108",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "BOTTOM"
+                    },
+                    {
+                      "cell": "D109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U109",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X109",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "static": "UTILITY"
+                    },
+                    {
+                      "cell": "D110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "I110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "L110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "O110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "R110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "U110",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "X110",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Top matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "F114",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J114",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B115",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F115",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J115",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B116",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F116",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J116",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B117",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F117",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J117",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B118",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F118",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J118",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Bottom matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "S114",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W114",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O115",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S115",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W115",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O116",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S116",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W116",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O117",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S117",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W117",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O118",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S118",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W118",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Jungle matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "F121",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J121",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B122",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F122",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J122",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B123",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F123",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J123",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B124",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F124",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J124",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B125",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F125",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J125",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Support matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "S121",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W121",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O122",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S122",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W122",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O123",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S123",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W123",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O124",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S124",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W124",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O125",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "S125",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W125",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Mid matchup (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Players"
+                    },
+                    {
+                      "cell": "F128",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J128",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B129",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F129",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J129",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B130",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F130",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J130",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B131",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F131",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J131",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "B132",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!W2:W120"
+                    },
+                    {
+                      "cell": "F132",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "J132",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "table",
+                "title": "Teams (season)",
+                "columns": [
+                  "Stat",
+                  "Player 1",
+                  "Player 2"
+                ],
+                "rows": [
+                  [
+                    {
+                      "static": "Teams"
+                    },
+                    {
+                      "cell": "S128",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W128",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O129",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!X2:X120"
+                    },
+                    {
+                      "cell": "S129",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W129",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O130",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!X2:X120"
+                    },
+                    {
+                      "cell": "S130",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W130",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O131",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!X2:X120"
+                    },
+                    {
+                      "cell": "S131",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W131",
+                      "type": "readonly"
+                    }
+                  ],
+                  [
+                    {
+                      "cell": "O132",
+                      "type": "select",
+                      "optionsFrom": "{tab}BTS!X2:X120"
+                    },
+                    {
+                      "cell": "S132",
+                      "type": "readonly"
+                    },
+                    {
+                      "cell": "W132",
+                      "type": "readonly"
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

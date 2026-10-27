@@ -1,0 +1,49 @@
+# --- Secrets & personal settings (NEVER commit) ---
+config.json
+config.json.*
+*.bak
+*.corrupt-*
+*.tmp
+window-state.json
+portable.txt
+logs/
+*.log
+
+# --- Dependencies & bundled runtime ---
+node_modules/
+runtime/
+
+# --- Build output (attach installers to GitHub Releases instead) ---
+installer/Output/
+SheetsToOBS.exe
+*.exe
+*.pfx
+*.p12
+
+# --- Test artifacts ---
+tests/test-config.json
+tests/test-profiles.json
+tests/test-server-config.json
+tests/tmp-*.json
+
+# --- Exported profiles (may contain a Sheet ID, API key or full backup) ---
+obs-sheets-*.json
+*-backup.json
+*-with-sheet-access.json
+
+# --- Not published yet: Apps Script + production Control Sheet material ---
+# (kept in your local folder; the champion-data scripts will be added later)
+apps-script/
+docs/CONTROL-SHEET-REVIEW.md
+tests/fixtures/
+tests/control-sheet-tests.js
+tests/apps-script-imports-tests.js
+tests/menu-tests.js
+tests/mock-apps-script.js
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

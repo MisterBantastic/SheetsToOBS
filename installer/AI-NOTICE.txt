@@ -1,0 +1,17 @@
+IMPORTANT: THIS SOFTWARE WAS MADE WITH AI
+=========================================
+
+Most of the code in SheetsToOBS (the desktop app, installer, launcher, Apps
+Script files and documentation) was written by AI coding assistants, with a
+human directing, testing and reviewing the work. It has NOT had an independent
+professional security audit.
+
+Before using it for a real broadcast:
+
+  * Test it on a copy of your Google Sheet and a test OBS scene collection.
+  * Keep your OBS WebSocket password set and your Google API key restricted
+    to the Google Sheets API.
+  * Expect bugs. Have a manual fallback for anything that matters on air.
+
+The software is provided "AS IS", without warranty of any kind (see the
+license on the previous page). Details: AI_DISCLOSURE.md in the install folder.
