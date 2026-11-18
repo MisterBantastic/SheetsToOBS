@@ -20,7 +20,7 @@ if (fs.existsSync(testProfilesPath)) fs.unlinkSync(testProfilesPath);
 if (fs.existsSync(testServerConfigPath)) fs.unlinkSync(testServerConfigPath);
 
 console.log('==================================================');
-console.log('RUNNING UNIT & INTEGRATION TESTS FOR OBS SHEETS GUI');
+console.log('RUNNING UNIT & INTEGRATION TESTS FOR SHEETSTOOBS');
 console.log('==================================================\n');
 
 // TEST 1: ConfigManager URL parsing

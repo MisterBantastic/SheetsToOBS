@@ -5,9 +5,13 @@ config.json.*
 *.corrupt-*
 *.tmp
 window-state.json
+resume-sync.flag
 portable.txt
 logs/
 *.log
+scene-collections/
+/publish/
+/media/
 
 # --- Dependencies & bundled runtime ---
 node_modules/
@@ -27,6 +31,7 @@ tests/test-server-config.json
 tests/tmp-*.json
 
 # --- Exported profiles (may contain a Sheet ID, API key or full backup) ---
+SheetsToOBS-*.json
 obs-sheets-*.json
 *-backup.json
 *-with-sheet-access.json
@@ -47,3 +52,6 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# --- Local backups made while preparing releases ---
+_backup*/

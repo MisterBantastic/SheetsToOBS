@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-title OBS Google Sheet Importer GUI
+title SheetsToOBS
 cd /d "%~dp0"
 
 :: 1. Locate Node.js Runtime (Bundled private runtime first, then system PATH)

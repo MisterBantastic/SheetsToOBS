@@ -5,6 +5,10 @@ const os = require('os');
 const ConfigManager = require('./engine/config-manager');
 const ImporterEngine = require('./engine/importer-engine');
 const ControlSheet = require('./engine/control-sheet');
+const updates = require('./engine/update-checker');
+const sceneShare = require('./engine/scene-share');
+const setupCheck = require('./engine/setup-check');
+const { LogFile, rotateIfLarge } = require('./engine/log-file');
 const { dataFile, dataDir } = require('./paths');
 
 // Experimental Control Sheet / Web Dashboard. Everything behind this switch is
@@ -33,6 +37,10 @@ const SECURITY_HEADERS = {
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer'
 };
+
+// If the server stops because of an unexpected error while syncing, it leaves this
+// note behind; the next start within RESUME_MAX_AGE_MS carries on syncing.
+const RESUME_MAX_AGE_MS = 2 * 60 * 1000;
 
 // Failed access-code attempts per remote address (simple brute-force brake).
 const ACCESS_FAILS = new Map(); // ip -> { count, until }
@@ -105,6 +113,14 @@ function readJsonBody(req, limit = 1024 * 1024) {
   });
 }
 
+// Largest request body accepted per endpoint (bytes). Everything else: 1 MB.
+const BODY_LIMIT_DEFAULT = 1024 * 1024;
+const BODY_LIMITS = {
+  '/api/publish/scan': 80 * 1024 * 1024,
+  '/api/publish/prepare': 80 * 1024 * 1024,
+  '/api/profiles/import': 5 * 1024 * 1024
+};
+
 function sendJson(res, status, obj) {
   res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(obj));
@@ -119,13 +135,266 @@ class DesktopServer {
     this.clients = new Set();
     this.logHistory = [];
     this.maxLogs = 300;
+    this.logFile = new LogFile(dataFile('logs'));
     this.lastHeartbeat = Date.now();
     this.serverStartTime = Date.now();
     this.hasEverHadClients = false;
     this.watchdogInterval = null;
     this.shutdownTimer = null;
+    this.appUpdateCache = null; // { at, result }
+    this.updateChecker = updates;
+    this.setupSystem = setupCheck.realSystem; // replaced by tests
+    this.testObs = (address, password) => ImporterEngine.testObsConnection(address, password);
+    this.readSheetRows = (config) => DesktopServer.fetchSheetRows(config); // replaced by tests
 
     this.setupEngineListeners();
+  }
+
+  /** The active profile's sheet as { row: { type, value } }, or null if it can't be read. */
+  static async fetchSheetRows(config) {
+    if (!config.sheetId || !config.apikey) return null;
+    const range = encodeURIComponent(`${config.tabname || 'Interface'}!A:E`);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.sheetId)}/values/${range}?key=${encodeURIComponent(config.apikey)}&majorDimension=ROWS`;
+    try {
+      const data = await ImporterEngine.httpGetJson(url);
+      return sceneShare.sheetRowsFromValues(data.values);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** Media folder for the active profile's collection. */
+  mediaDirFor(config, info) {
+    return config.mediaFolder || this.updateChecker.defaultMediaDir(info && info.name);
+  }
+
+  /**
+   * Setup Check and "Prepare for sharing" (this PC only: not in LAN_ALLOWED_API).
+   * Returns true when the request was handled.
+   */
+  async handleSetup(req, res, pathname) {
+    const u = this.updateChecker;
+    try {
+      if (pathname === '/api/setup-check' && req.method === 'GET') {
+        const config = this.configManager.load();
+        let info = null;
+        let infoError = '';
+        if (config.sceneCollectionManifestUrl) {
+          try {
+            info = await u.checkSceneCollection(config.sceneCollectionManifestUrl, config.sceneCollectionVersion);
+          } catch (e) {
+            infoError = e.response ? `server answered ${e.response.status}` : e.message;
+          }
+        }
+        const items = await setupCheck.runChecks({
+          config,
+          info,
+          infoError,
+          mediaDir: this.mediaDirFor(config, info),
+          testObs: this.testObs,
+          sys: this.setupSystem
+        });
+        sendJson(res, 200, { success: true, items });
+        return true;
+      }
+
+      if (pathname === '/api/setup-check/seen' && req.method === 'POST') {
+        sendJson(res, 200, this.configManager.setUpdateSettings({ setupCheckShownVersion: u.appVersion() }));
+        return true;
+      }
+
+      if (pathname === '/api/setup-check/fix' && req.method === 'POST') {
+        const { id } = await readJsonBody(req);
+        if (id !== 'league-timers') {
+          sendJson(res, 400, { success: false, error: 'Nothing to fix for that item.' });
+          return true;
+        }
+        const result = setupCheck.fixEsportsTimers(this.setupSystem);
+        result.changed.forEach(f => this.engine.log('info', `Turned on League esports timers in ${f} (backup: ${f}.sheetstoobs-backup).`));
+        sendJson(res, 200, { success: true, ...result });
+        return true;
+      }
+
+      // Kit builder, step 1: what this collection needs, for the admin to review.
+      if (pathname === '/api/publish/scan' && req.method === 'POST') {
+        const body = await readJsonBody(req, 80 * 1024 * 1024);
+        const scanned = sceneShare.scan(body.collectionText);
+        const installed = await setupCheck.scanInstalledPlugins(this.setupSystem);
+        const plugins = installed.map(p => ({ ...p, required: scanned.plugins.includes(p.id) }));
+        // Needed by the collection but not installed on this PC.
+        scanned.plugins.filter(id => !installed.some(p => p.id === id)).forEach((id) => {
+          const k = sceneShare.KNOWN_PLUGINS[id];
+          plugins.unshift({ id, name: k.name, dll: k.dll, version: '', url: k.url, required: true });
+        });
+        sendJson(res, 200, { success: true, name: scanned.name, fonts: scanned.fonts, unknownKinds: scanned.unknownKinds, plugins });
+        return true;
+      }
+
+      // Kit builder, last step: fetch the hosted kit the way a producer's PC would.
+      if (pathname === '/api/publish/test-link' && req.method === 'POST') {
+        const body = await readJsonBody(req);
+        sendJson(res, 200, { success: true, ...(await u.verifyHostedPackage(String(body.url || ''))) });
+        return true;
+      }
+
+      if (pathname === '/api/publish/prepare' && req.method === 'POST') {
+        const body = await readJsonBody(req, 80 * 1024 * 1024);
+        const mediaFolder = String(body.mediaFolder || '').trim();
+        const links = String(body.links || '').split(/\r?\n/).map((line) => {
+          const [label, url] = line.split('|').map(s => (s || '').trim());
+          return { label, url };
+        }).filter(l => l.label);
+        const reviewed = Array.isArray(body.plugins) ? u.parseRequirements({ plugins: body.plugins, fonts: body.fonts }) : null;
+        const pkg = sceneShare.prepare(body.collectionText, {
+          plugins: reviewed && reviewed.plugins,
+          fonts: reviewed && reviewed.fonts,
+          sheetRows: await this.readSheetRows(this.configManager.load()),
+          version: String(body.version || '').trim(),
+          notes: body.notes || '',
+          mediaFiles: mediaFolder ? sceneShare.readMediaFolder(mediaFolder) : [],
+          installedPlugins: await setupCheck.installedPluginVersions(this.setupSystem),
+          leagueEsportsTimers: body.leagueEsportsTimers === true,
+          links,
+          blankUnlinked: body.blankUnlinked === true
+        });
+        const outDir = sceneShare.writePackage(dataFile('publish', sceneShare.safeName(pkg.manifest.name)), pkg);
+        this.configManager.save({
+          publishMediaFolder: mediaFolder,
+          lastPublishedVersion: pkg.manifest.version,
+          publishLinks: String(body.links || '').slice(0, 2000),
+          publishLeagueTimers: body.leagueEsportsTimers === true
+        });
+        this.engine.log('info', `Prepared "${pkg.manifest.name}" v${pkg.manifest.version} for sharing in ${outDir}.`);
+        if (pkg.report.scripts) {
+          this.engine.log('warn', `This collection has ${pkg.report.scripts} OBS script(s) (Tools > Scripts). They are not passed on to producers: tell them to add the scripts by hand if the show needs them.`);
+        }
+        sendJson(res, 200, {
+          success: true,
+          outDir,
+          manifest: pkg.manifest,
+          collectionFile: pkg.collectionFile,
+          report: pkg.report
+        });
+        return true;
+      }
+
+      if (pathname === '/api/publish/open-folder' && req.method === 'POST') {
+        const dir = dataFile('publish');
+        fs.mkdirSync(dir, { recursive: true });
+        if (process.platform === 'win32') {
+          require('child_process').spawn('explorer.exe', [dir], { detached: true, stdio: 'ignore' }).unref();
+        }
+        sendJson(res, 200, { success: true, dir });
+        return true;
+      }
+    } catch (err) {
+      sendJson(res, 200, { success: false, error: err.message || String(err) });
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Update checks (this PC only: none of these paths are in LAN_ALLOWED_API).
+   * Returns true when the request was handled.
+   */
+  async handleUpdates(req, res, pathname, parsedUrl) {
+    const u = this.updateChecker;
+    try {
+      if (pathname === '/api/updates/app' && req.method === 'GET') {
+        const config = this.configManager.load();
+        const force = parsedUrl.searchParams.get('force') === '1';
+        if (!force && !config.checkForAppUpdates) {
+          sendJson(res, 200, { success: true, enabled: false, current: u.appVersion() });
+          return true;
+        }
+        // GitHub is asked once per app start (reopening the window reuses the answer)
+        // and again only when "Check now" is pressed.
+        const cached = this.appUpdateCache;
+        let result;
+        if (!force && cached) {
+          result = cached.result;
+        } else {
+          result = await u.checkApp();
+          this.appUpdateCache = { at: Date.now(), result };
+          if (result.newer) this.engine.log('info', `SheetsToOBS ${result.latest} is available (you have ${result.current}).`);
+        }
+        sendJson(res, 200, {
+          success: true,
+          enabled: config.checkForAppUpdates,
+          ...result,
+          skipped: !force && result.latest === config.skippedAppVersion
+        });
+        return true;
+      }
+
+      if (pathname === '/api/updates/settings' && req.method === 'POST') {
+        const body = await readJsonBody(req);
+        const result = this.configManager.setUpdateSettings({
+          checkForAppUpdates: body.checkForAppUpdates,
+          skippedAppVersion: body.skippedAppVersion
+        });
+        sendJson(res, result.success ? 200 : 400, result);
+        return true;
+      }
+
+      if (pathname.startsWith('/api/updates/scene-collection')) {
+        const config = this.configManager.load();
+        if (!config.sceneCollectionManifestUrl) {
+          sendJson(res, 200, { success: true, configured: false });
+          return true;
+        }
+        // Always re-read the manifest here; never trust a file URL sent by the page.
+        const info = await u.checkSceneCollection(config.sceneCollectionManifestUrl, config.sceneCollectionVersion);
+
+        if (pathname === '/api/updates/scene-collection' && req.method === 'GET') {
+          const force = parsedUrl.searchParams.get('force') === '1';
+          sendJson(res, 200, {
+            success: true,
+            configured: true,
+            ...info,
+            skipped: !force && info.version === config.sceneCollectionSkippedVersion
+          });
+          return true;
+        }
+
+        if (pathname === '/api/updates/scene-collection/download' && req.method === 'POST') {
+          const saved = await u.downloadSceneCollection(info, { mediaDir: this.mediaDirFor(config, info) });
+          this.configManager.save({ sceneCollectionVersion: info.version });
+          if (saved.scriptsRemoved) {
+            this.engine.log('warn', `${saved.scriptsRemoved} OBS script(s) were removed from the downloaded scene collection, because scripts can run anything on this PC. If the show needs them, ask your admin and add them yourself in OBS: Tools > Scripts.`);
+          }
+          if (saved.mediaDir) {
+            this.engine.log('info', `Media for "${info.name}": ${saved.mediaDownloaded} downloaded, ${saved.mediaSkipped} already up to date, in ${saved.mediaDir}.`);
+          }
+          this.engine.log('info', `Downloaded scene collection "${info.name}" v${info.version} to ${saved.filePath}. Import it in OBS: Scene Collection > Import.`);
+          sendJson(res, 200, { success: true, ...info, installed: info.version, newer: false, ...saved });
+          return true;
+        }
+
+        if (pathname === '/api/updates/scene-collection/skip' && req.method === 'POST') {
+          this.configManager.save({ sceneCollectionSkippedVersion: info.version });
+          this.engine.log('info', `Scene collection "${info.name}" v${info.version} ignored.`);
+          sendJson(res, 200, { success: true, ...info, skipped: true });
+          return true;
+        }
+      }
+
+      if (pathname === '/api/updates/open-folder' && req.method === 'POST') {
+        const dir = u.collectionsDir();
+        fs.mkdirSync(dir, { recursive: true });
+        if (process.platform === 'win32') {
+          require('child_process').spawn('explorer.exe', [dir], { detached: true, stdio: 'ignore' }).unref();
+        }
+        sendJson(res, 200, { success: true, dir });
+        return true;
+      }
+    } catch (err) {
+      const msg = err.response ? `Server answered ${err.response.status}` : (err.message || String(err));
+      sendJson(res, 200, { success: false, error: msg });
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -162,6 +431,7 @@ class DesktopServer {
       ].join('\n');
 
       const crashFilePath = path.join(logsDir, 'crash.log');
+      rotateIfLarge(crashFilePath);
       fs.appendFileSync(crashFilePath, crashReport, 'utf8');
       console.error(crashReport);
     } catch (logErr) {
@@ -169,8 +439,34 @@ class DesktopServer {
     }
   }
 
+  /** Called just before the server stops on an unexpected error. */
+  markResumeIfRunning() {
+    try {
+      if (this.engine.isRunning && !this.engine.simulationMode) {
+        fs.writeFileSync(dataFile('resume-sync.flag'), String(Date.now()), 'utf8');
+        return true;
+      }
+    } catch (e) { /* nothing more can be done while crashing */ }
+    return false;
+  }
+
+  /** True (once) when the last run stopped unexpectedly while syncing, a moment ago. */
+  consumeResumeMarker() {
+    const file = dataFile('resume-sync.flag');
+    try {
+      if (!fs.existsSync(file)) return false;
+      const at = parseInt(fs.readFileSync(file, 'utf8'), 10);
+      fs.unlinkSync(file);
+      const age = Date.now() - at;
+      return Number.isFinite(age) && age >= 0 && age < RESUME_MAX_AGE_MS;
+    } catch (e) {
+      return false;
+    }
+  }
+
   setupEngineListeners() {
     this.engine.on('log', (logEntry) => {
+      this.logFile.append(logEntry);
       this.logHistory.push(logEntry);
       if (this.logHistory.length > this.maxLogs) {
         this.logHistory.shift();
@@ -408,6 +704,24 @@ class DesktopServer {
         }
       }
 
+      // Every request body is size-limited here, whichever endpoint reads it.
+      const bodyLimit = BODY_LIMITS[pathname] || BODY_LIMIT_DEFAULT;
+      const tooLarge = () => {
+        if (res.headersSent) return;
+        req.removeAllListeners('end'); // the endpoint never sees a cut-off body
+        res.writeHead(413, { 'Content-Type': 'application/json', 'Connection': 'close' });
+        res.end(JSON.stringify({ success: false, error: 'Request body too large.' }), () => req.destroy());
+      };
+      if (Number(req.headers['content-length']) > bodyLimit) {
+        tooLarge();
+        return;
+      }
+      let bodyBytes = 0;
+      req.on('data', (chunk) => {
+        bodyBytes += chunk.length;
+        if (bodyBytes > bodyLimit) tooLarge();
+      });
+
       const experimental = this.configManager.isExperimentalEnabled();
       if (!experimental && (EXPERIMENTAL_STATIC.has(pathname) || pathname.startsWith('/api/sheet-control/'))) {
         if (isApi) {
@@ -615,7 +929,14 @@ class DesktopServer {
         const config = this.configManager.load();
         const permissions = this.configManager.checkWritePermission();
         res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-        res.end(JSON.stringify({ ...config, permissions }));
+        res.end(JSON.stringify({
+          ...config,
+          permissions,
+          appVersion: this.updateChecker.appVersion(),
+          // Setup Check opens by itself once per installed version, not on every start.
+          setupCheckDue: config.setupCheckShownVersion !== this.updateChecker.appVersion(),
+          defaultMediaFolder: dataFile('media')
+        }));
         return;
       }
 
@@ -662,6 +983,20 @@ class DesktopServer {
         return;
       }
 
+      // API: Setup Check and "Prepare for sharing"
+      if (pathname.startsWith('/api/setup-check') || pathname.startsWith('/api/publish/')) {
+        if (await this.handleSetup(req, res, pathname)) return;
+        sendJson(res, 404, { success: false, error: 'Unknown setup endpoint.' });
+        return;
+      }
+
+      // API: App and scene collection update checks
+      if (pathname.startsWith('/api/updates/')) {
+        if (await this.handleUpdates(req, res, pathname, parsedUrl)) return;
+        sendJson(res, 404, { success: false, error: 'Unknown update endpoint.' });
+        return;
+      }
+
       // API: Get Full Profiles structure
       if (pathname === '/api/profiles' && req.method === 'GET') {
         const fullData = this.configManager.getFullData();
@@ -684,7 +1019,7 @@ class DesktopServer {
               // Reset cached visibility states for clean sync on profile switch
               this.engine.visibilityStateMap.clear();
               if (this.engine.isRunning && !this.engine.simulationMode) {
-                this.engine.updateCycle().catch(() => {});
+                this.engine.updateCycle({ force: true }).catch(() => {});
               }
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify(result));
@@ -784,11 +1119,11 @@ class DesktopServer {
         let filename;
         if (profileParam === 'all') {
           data = this.configManager.exportAll(!isClean, opts);
-          filename = `obs-sheets-all-profiles-${kind}.json`;
+          filename = `SheetsToOBS-all-profiles-${kind}.json`;
         } else {
           data = this.configManager.exportProfile(profileParam, !isClean, opts);
           const safeName = (data ? data.profileName : 'config').replace(/[^a-zA-Z0-9_-]/g, '_');
-          filename = `obs-sheets-profile-${safeName}-${kind}.json`;
+          filename = `SheetsToOBS-profile-${safeName}-${kind}.json`;
         }
 
         if (!data) {
@@ -811,8 +1146,8 @@ class DesktopServer {
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
           try {
-            const { json, overrideName } = JSON.parse(body || '{}');
-            const result = this.configManager.importData(json, overrideName);
+            const { json, overrideName, overwrite } = JSON.parse(body || '{}');
+            const result = this.configManager.importData(json, overrideName, { overwrite: overwrite === true });
             if (result.success) {
               this.engine.log('info', result.message || 'Import successful.');
               res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -848,7 +1183,7 @@ class DesktopServer {
         if (!this.engine.isRunning) {
           this.engine.start();
         } else {
-          this.engine.updateCycle().catch(() => {});
+          this.engine.updateCycle({ force: true }).catch(() => {});
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
@@ -891,6 +1226,29 @@ class DesktopServer {
             res.end(JSON.stringify({ success: false, error: e.message }));
           }
         });
+        return;
+      }
+
+      // API: Scene collections in OBS (for the "Required scene collection" setting)
+      if (pathname === '/api/obs/scene-collections' && req.method === 'GET') {
+        (async () => {
+          try {
+            if (this.engine.obs && this.engine.obsStatus.connected && !this.engine.simulationMode) {
+              const r = await this.engine.obs.call('GetSceneCollectionList');
+              sendJson(res, 200, { success: true, current: r.currentSceneCollectionName || '', collections: r.sceneCollections || [] });
+              return;
+            }
+            const config = this.configManager.load();
+            const t = await ImporterEngine.testObsConnection(config.obsaddress, config.obsauth);
+            if (!t.success) {
+              sendJson(res, 200, { success: false, error: t.error });
+              return;
+            }
+            sendJson(res, 200, { success: true, current: t.sceneCollection || '', collections: t.sceneCollections || [] });
+          } catch (e) {
+            sendJson(res, 200, { success: false, error: e.message });
+          }
+        })();
         return;
       }
 
@@ -977,7 +1335,11 @@ class DesktopServer {
     server.listen(this.port, host, () => {
       console.log(`[SheetsToOBS Desktop Server] Running on http://localhost:${this.port}${this.lanBound ? ' (also reachable from the local network)' : ''}`);
       const initialConfig = this.configManager.load();
-      if (initialConfig.autoStart) {
+      const resume = this.consumeResumeMarker();
+      if (resume) {
+        this.engine.log('warn', 'SheetsToOBS restarted after an unexpected error (details in logs\\crash.log). Syncing is resumed.');
+      }
+      if (initialConfig.autoStart || resume) {
         this.engine.start();
       }
     });
@@ -987,8 +1349,11 @@ class DesktopServer {
 }
 
 // Global Process Crash Watchdogs
+let activeServer = null;
 process.on('uncaughtException', (err) => {
   DesktopServer.writeCrashLog(err, 'UNCAUGHT_EXCEPTION');
+  // Exit code 1 tells the tray launcher to start the server again.
+  if (activeServer) activeServer.markResumeIfRunning();
   console.error('[CRITICAL] Uncaught exception occurred:', err);
   process.exit(1);
 });
@@ -1001,6 +1366,7 @@ process.on('unhandledRejection', (reason) => {
 
 if (require.main === module) {
   const srv = new DesktopServer(4587);
+  activeServer = srv;
   srv.start();
 }
 

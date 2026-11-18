@@ -84,6 +84,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   safeInit('initDelegatedActions', initDelegatedActions);
   safeInit('initExperimentalToggle', initExperimentalToggle);
+  safeInit('initSceneCollectionLock', initSceneCollectionLock);
+  safeInit('initUpdates', initUpdates);
+  safeInit('initSetupCheck', initSetupCheck);
+  safeInit('initShareCollection', initShareCollection);
   safeInit('initTabs', initTabs);
   safeInit('initModeToggle', initModeToggle);
   safeInit('initSSE', initSSE);
@@ -294,7 +298,24 @@ function updateStatusUI(data) {
 
   obsAddressText.textContent = appState.obs.address || 'ws://localhost:4455';
   
-  if (appState.obs.connected) {
+  const wrongCollection = !!(appState.obs.connected && appState.obs.sceneCollectionMismatch);
+  const lockBanner = document.getElementById('collectionLockBanner');
+  if (lockBanner) {
+    lockBanner.classList.toggle('hidden', !wrongCollection);
+    const lockText = document.getElementById('collectionLockText');
+    if (lockText && wrongCollection) {
+      lockText.textContent = appState.obs.sceneCollection
+        ? `OBS has "${appState.obs.sceneCollection}" open; this profile requires "${appState.obs.requiredSceneCollection}". Switch collections in OBS (Scene Collection menu) or change the requirement in Profiles & Config.`
+        : `Waiting for OBS to finish loading a scene collection (this profile requires "${appState.obs.requiredSceneCollection}").`;
+    }
+  }
+
+  if (wrongCollection) {
+    obsBadge.className = 'badge badge-disconnected';
+    obsBadge.textContent = 'Wrong Collection';
+    obsVersionLatency.textContent = `${appState.obs.version || '5.x'} / ${appState.obs.latency || 0} ms`;
+    obsScenesSources.textContent = `Open: ${appState.obs.sceneCollection || '…'} / Needs: ${appState.obs.requiredSceneCollection}`;
+  } else if (appState.obs.connected) {
     obsBadge.className = 'badge badge-connected';
     obsBadge.textContent = 'Connected';
     obsVersionLatency.textContent = `${appState.obs.version || '5.x'} / ${appState.obs.latency || 0} ms`;
@@ -644,6 +665,11 @@ function populateProfileDropdowns(profilesList, activeProfile) {
 /* ==========================================================================
    IMPORT CONFIG MODAL
    ========================================================================== */
+// Set by initImportModal(). Setup Check uses it to open the import window, and
+// gets the user back to Setup Check when that window closes.
+let openImportModal = null;
+let importReturnsToSetupCheck = false;
+
 function initImportModal() {
   const modal = document.getElementById('importModal');
   const btnOpen = document.getElementById('btnOpenImportModal');
@@ -662,13 +688,22 @@ function initImportModal() {
     fileInput.value = '';
   };
 
-  const closeModal = () => {
+  // backToSetupCheck: false when another window takes over (e.g. permission problem).
+  const closeModal = (backToSetupCheck = true) => {
     modal.classList.add('hidden');
+    if (importReturnsToSetupCheck) {
+      importReturnsToSetupCheck = false;
+      if (backToSetupCheck === true) openSetupCheck();
+    }
   };
+  openImportModal = openModal;
 
-  if (btnOpen) btnOpen.addEventListener('click', openModal);
-  if (btnClose) btnClose.addEventListener('click', closeModal);
-  if (btnCancel) btnCancel.addEventListener('click', closeModal);
+  if (btnOpen) btnOpen.addEventListener('click', () => {
+    importReturnsToSetupCheck = false;
+    openModal();
+  });
+  if (btnClose) btnClose.addEventListener('click', () => closeModal());
+  if (btnCancel) btnCancel.addEventListener('click', () => closeModal());
 
   if (btnBrowse && fileInput) {
     btnBrowse.addEventListener('click', () => fileInput.click());
@@ -702,21 +737,34 @@ function initImportModal() {
       }
 
       try {
-        const res = await fetch('/api/profiles/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            json: parsed,
-            overrideName: nameOverride.value.trim() || null
-          })
-        });
-        const result = await res.json();
+        const sendImport = async (overwrite) => {
+          const res = await fetch('/api/profiles/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              json: parsed,
+              overrideName: nameOverride.value.trim() || null,
+              overwrite
+            })
+          });
+          return res.json();
+        };
+        let result = await sendImport(false);
+        if (result.code === 'PROFILE_EXISTS') {
+          const names = (result.existing || []).join(', ');
+          if (!confirm(`Replace the existing profile(s): ${names}?\n\nTheir current settings will be overwritten. Press Cancel to keep them, then enter a different name in the import box.`)) {
+            showToast('Import cancelled. Nothing was changed.', 'info');
+            return;
+          }
+          result = await sendImport(true);
+        }
         if (result.success) {
           showToast(result.message || 'Import successful!', 'success');
-          closeModal();
           await loadInitialConfig();
+          closeModal(); // back to Setup Check if it was opened from there
+
         } else if (result.code === 'WRITE_PERMISSION_DENIED') {
-          closeModal();
+          closeModal(false);
           showPermissionModal(result);
         } else {
           showToast(result.error || 'Import failed', 'error');
@@ -2007,7 +2055,7 @@ function exportLogs() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `obs-sheets-logs-${appState.activeProfile}-${new Date().toISOString().slice(0, 10)}.txt`;
+  a.download = `SheetsToOBS-logs-${appState.activeProfile}-${new Date().toISOString().slice(0, 10)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('Logs exported to text file', 'success');
@@ -2117,7 +2165,7 @@ function initSettings() {
   // Real-time auto-save listeners on all form fields
   const inputIds = [
     'cfgSheetId', 'cfgTabName', 'cfgRange', 'cfgApiKey', 
-    'cfgObsAddress', 'cfgObsAuth', 'cfgPolling', 'cfgAutoStart', 
+    'cfgObsAddress', 'cfgObsAuth', 'cfgRequiredSceneCollection', 'cfgPolling', 'cfgAutoStart', 
     'cfgLogVisibilityOnlyOnChanges', 'cfgShowVisibilityLogs',
     'cfgLogMissingRowsOnlyOnChanges', 'cfgShowMissingRowLogs',
     'cfgControlTab', 'cfgControlPoll', 'cfgScriptUrl', 'cfgScriptToken', 'cfgAllowLanDashboard'
@@ -2272,6 +2320,13 @@ function initSettings() {
             <strong>Connection Successful!</strong><br>
             Connected to OBS WebSocket at <code>${escapeHtml(address)}</code><br>
             Roundtrip Latency: <strong>${data.latency}ms</strong> | OBS Version: <strong>${escapeHtml(data.obsVersion)}</strong> | Scenes: <strong>${data.scenesCount}</strong><br>
+            Open scene collection: <strong>${escapeHtml(data.sceneCollection || 'unknown')}</strong>${(() => {
+              const req = (document.getElementById('cfgRequiredSceneCollection') || { value: '' }).value.trim();
+              if (!req) return '';
+              return req.toLowerCase() === String(data.sceneCollection || '').toLowerCase()
+                ? ' ✅ matches the required collection'
+                : ` <span style="color: var(--danger, #ef4444); font-weight: 600;">⛔ this profile requires "${escapeHtml(req)}"</span>`;
+            })()}<br>
             <small style="margin-top: 4px; display: inline-block;">Source Switcher Plugin: ${pluginBadge}</small>
           `;
         } else {
@@ -2362,6 +2417,9 @@ function getCurrentFormConfig() {
     apikey: apiKeyEl ? apiKeyEl.value.trim() : '',
     obsaddress: obsAddressEl ? obsAddressEl.value.trim() : 'ws://localhost:4455',
     obsauth: obsAuthEl ? obsAuthEl.value : '',
+    requiredSceneCollection: (document.getElementById('cfgRequiredSceneCollection') || { value: '' }).value.trim(),
+    sceneCollectionManifestUrl: (document.getElementById('cfgSceneCollectionManifestUrl') || { value: '' }).value.trim(),
+    mediaFolder: (document.getElementById('cfgMediaFolder') || { value: '' }).value.trim(),
     polling: pollingEl ? parsePollingValue(pollingEl.value) : 2000,
     autoStart: autoStartEl ? autoStartEl.checked : false,
     logVisibilityOnlyOnChanges: logVisEl ? logVisEl.checked : true,
@@ -2418,6 +2476,17 @@ function populateFormFields(config) {
   if (apiKeyEl) apiKeyEl.value = config.apikey || '';
   if (obsAddressEl) obsAddressEl.value = config.obsaddress || 'ws://localhost:4455';
   if (obsAuthEl) obsAuthEl.value = config.obsauth || '';
+  const reqColEl = document.getElementById('cfgRequiredSceneCollection');
+  if (reqColEl) reqColEl.value = config.requiredSceneCollection || '';
+  const manifestEl = document.getElementById('cfgSceneCollectionManifestUrl');
+  if (manifestEl) manifestEl.value = config.sceneCollectionManifestUrl || '';
+  setSceneCollectionVersionHint(config.sceneCollectionVersion);
+  const mediaEl = document.getElementById('cfgMediaFolder');
+  if (mediaEl) mediaEl.value = config.mediaFolder || '';
+  populateShareFields(config);
+  // Profile loaded or switched: its scene collection manifest may differ.
+  clearTimeout(sceneUpdateTimer);
+  sceneUpdateTimer = setTimeout(() => checkSceneCollectionUpdate(false), 1500);
   if (pollingEl) pollingEl.value = config.polling || 2000;
   if (autoStartEl) autoStartEl.checked = !!config.autoStart;
   if (logVisEl) logVisEl.checked = config.logVisibilityOnlyOnChanges !== false;
@@ -2443,6 +2512,12 @@ async function loadInitialConfig() {
 
     // Experimental Control Sheet / Web Dashboard: hidden unless switched on (Personalization tab).
     applyExperimentalState(config.experimentalControlSheet === true, config.experimentalForced === true);
+    const updatesBox = document.getElementById('chkCheckAppUpdates');
+    if (updatesBox) updatesBox.checked = config.checkForAppUpdates !== false;
+    const mediaHint = document.getElementById('mediaFolderDefaultHint');
+    if (mediaHint && config.defaultMediaFolder) mediaHint.textContent = `Default: ${config.defaultMediaFolder}\\<collection name>.`;
+    // Once per installed version (fresh install or update), never on a normal start.
+    if (config.setupCheckDue) setTimeout(() => openSetupCheck(), 1500);
 
     populateProfileDropdowns(appState.profilesList, appState.activeProfile);
     populateFormFields(config);
@@ -2587,6 +2662,553 @@ function applyExperimentalState(enabled, forced) {
   if (hint) hint.classList.toggle('hidden', !forced);
 }
 
+/** "Use current" button + dropdown suggestions for the Required Scene Collection setting. */
+function initSceneCollectionLock() {
+  const input = document.getElementById('cfgRequiredSceneCollection');
+  const btn = document.getElementById('btnUseCurrentCollection');
+  const list = document.getElementById('sceneCollectionOptions');
+  if (!input || !btn) return;
+
+  const load = async () => {
+    const res = await fetch('/api/obs/scene-collections');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Could not reach OBS');
+    if (list) {
+      list.textContent = '';
+      (data.collections || []).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        list.appendChild(opt);
+      });
+    }
+    return data;
+  };
+
+  input.addEventListener('focus', () => { load().catch(() => {}); });
+  btn.addEventListener('click', async () => {
+    try {
+      const data = await load();
+      if (!data.current) throw new Error('OBS did not report an open scene collection');
+      input.value = data.current;
+      await saveConfig(false);
+      showToast(`Scene collection lock set to "${data.current}"`, 'success');
+    } catch (err) {
+      showToast(`Could not read scene collections: ${err.message}. Is OBS running and connected?`, 'error');
+    }
+  });
+}
+
+/* ==========================================================================
+   UPDATE CHECKS (new SheetsToOBS release / new hosted scene collection)
+   All text from GitHub or the manifest is set with textContent, never as HTML.
+   ========================================================================== */
+const RELEASE_URL_PREFIX = 'https://github.com/MisterBantastic/SheetsToOBS/releases/';
+let sceneUpdateTimer = null;
+let lastAppUpdate = null;
+
+function initUpdates() {
+  const box = document.getElementById('chkCheckAppUpdates');
+  if (box) {
+    box.addEventListener('change', async () => {
+      try {
+        const res = await fetch('/api/updates/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ checkForAppUpdates: box.checked })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Could not save');
+        if (box.checked) checkAppUpdate(false);
+        else showAppUpdateBanner(null);
+      } catch (err) {
+        box.checked = !box.checked;
+        showToast(`Could not change update setting: ${err.message}`, 'error');
+      }
+    });
+  }
+
+  const btnApp = document.getElementById('btnCheckAppUpdate');
+  if (btnApp) btnApp.addEventListener('click', () => checkAppUpdate(true));
+
+  const btnScene = document.getElementById('btnCheckSceneCollection');
+  if (btnScene) {
+    btnScene.addEventListener('click', async () => {
+      if (await saveConfig(false)) checkSceneCollectionUpdate(true);
+    });
+  }
+
+  // Checked once when the app opens, and again only via the "Check now" buttons.
+  setTimeout(() => checkAppUpdate(false), 3000);
+}
+
+/** Release notes are Markdown; show the first few lines as plain text. */
+function summarizeReleaseNotes(notes) {
+  const lines = String(notes || '').split(/\r?\n/)
+    .map(l => l.replace(/^[#>*\-\s]+/, '').replace(/[*_`]/g, '').trim())
+    .filter(Boolean);
+  const text = lines.slice(0, 3).join('\n');
+  return text.length > 280 ? `${text.slice(0, 277)}…` : text;
+}
+
+async function checkAppUpdate(manual) {
+  const result = document.getElementById('appUpdateCheckResult');
+  if (manual && result) result.textContent = 'Checking…';
+  try {
+    const res = await fetch(`/api/updates/app${manual ? '?force=1' : ''}`);
+    const data = await res.json();
+    const ver = document.getElementById('appVersionText');
+    if (ver && data.current) ver.textContent = `v${data.current}`;
+    if (!data.success) throw new Error(data.error || 'Check failed');
+    if (data.enabled === false && !manual) return;
+    lastAppUpdate = data;
+    if (result) {
+      result.textContent = data.newer
+        ? `Version ${data.latest} is available.`
+        : `You have the latest version (${data.current}).`;
+    }
+    showAppUpdateBanner(data.newer && !data.skipped ? data : null);
+  } catch (err) {
+    if (manual && result) result.textContent = `Could not check GitHub: ${err.message}`;
+  }
+}
+
+function showAppUpdateBanner(data) {
+  const banner = document.getElementById('appUpdateBanner');
+  if (!banner) return;
+  if (!data) {
+    banner.classList.add('hidden');
+    return;
+  }
+  document.getElementById('appUpdateTitle').textContent =
+    `SheetsToOBS ${data.latest} is available (you have ${data.current}).`;
+  document.getElementById('appUpdateNotes').textContent = summarizeReleaseNotes(data.notes);
+  const link = document.getElementById('appUpdateLink');
+  link.href = typeof data.url === 'string' && data.url.startsWith(RELEASE_URL_PREFIX) ? data.url : `${RELEASE_URL_PREFIX}latest`;
+  banner.classList.remove('hidden');
+}
+
+async function skipAppUpdate() {
+  if (!lastAppUpdate || !lastAppUpdate.latest) return;
+  try {
+    await fetch('/api/updates/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skippedAppVersion: lastAppUpdate.latest })
+    });
+    showAppUpdateBanner(null);
+    showToast(`Version ${lastAppUpdate.latest} ignored. You'll be told about the next one.`, 'info');
+  } catch (err) {
+    showToast(`Could not save: ${err.message}`, 'error');
+  }
+}
+
+function setSceneCollectionVersionHint(version) {
+  const el = document.getElementById('sceneCollectionVersionHint');
+  if (el) el.textContent = version ? `Installed on this PC: v${version}.` : '';
+}
+
+async function checkSceneCollectionUpdate(manual) {
+  try {
+    const res = await fetch(`/api/updates/scene-collection${manual ? '?force=1' : ''}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Check failed');
+    if (!data.configured) {
+      showSceneUpdateBanner(null);
+      if (manual) showToast('Enter a Scene Collection Update URL first.', 'error');
+      return;
+    }
+    setSceneCollectionVersionHint(data.installed);
+    if (data.newer && !data.skipped) {
+      showSceneUpdateBanner(data, false);
+    } else if (data.newer) {
+      showSceneUpdateBanner(null);
+    } else {
+      showSceneUpdateBanner(null);
+      if (manual) showToast(`Scene collection "${data.name}" is up to date (v${data.version}).`, 'success');
+    }
+  } catch (err) {
+    if (manual) showToast(`Scene collection check failed: ${err.message}`, 'error');
+  }
+}
+
+function showSceneUpdateBanner(data, downloaded) {
+  const banner = document.getElementById('sceneUpdateBanner');
+  if (!banner) return;
+  if (!data) {
+    banner.classList.add('hidden');
+    return;
+  }
+  const title = document.getElementById('sceneUpdateTitle');
+  const text = document.getElementById('sceneUpdateText');
+  if (downloaded) {
+    title.textContent = `Scene collection "${data.name}" v${data.version} downloaded.`;
+    text.textContent = `Saved as "${data.fileName}". In OBS: Scene Collection › Import, pick this file, then switch to the imported collection.`;
+  } else {
+    title.textContent = `New scene collection available: "${data.name}" v${data.version}.`;
+    const have = data.installed ? `You have v${data.installed}.` : 'No version recorded on this PC yet.';
+    text.textContent = data.notes ? `${have}\n${data.notes.slice(0, 280)}` : have;
+  }
+  document.getElementById('btnSceneUpdateDownload').classList.toggle('hidden', !!downloaded);
+  document.getElementById('btnSceneUpdateSkip').classList.toggle('hidden', !!downloaded);
+  document.getElementById('btnSceneUpdateLater').textContent = downloaded ? 'Close' : 'Remind me later';
+  document.getElementById('btnSceneUpdateFolder').classList.toggle('hidden', !downloaded);
+  banner.classList.remove('hidden');
+}
+
+async function sceneCollectionAction(url, btn) {
+  const isDownload = url.endsWith('/download');
+  btn.disabled = true;
+  const label = btn.textContent;
+  if (isDownload) btn.textContent = 'Downloading…';
+  try {
+    const res = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed');
+    if (!data.configured && data.configured !== undefined) throw new Error('No Scene Collection Update URL is set');
+    setSceneCollectionVersionHint(data.installed);
+    if (isDownload) {
+      showSceneUpdateBanner(data, true);
+      openSetupCheck(); // a new collection may need new plugins, fonts or media
+    } else {
+      showSceneUpdateBanner(null);
+      showToast(`Scene collection v${data.version} ignored. You'll be told about the next version.`, 'info');
+    }
+  } catch (err) {
+    showToast(`${isDownload ? 'Download' : 'Update'} failed: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
+/* ==========================================================================
+   SETUP CHECK (modal). Item text comes from this PC and the hosted manifest,
+   so everything goes through escapeHtml(); links must be https.
+   ========================================================================== */
+const SETUP_ICONS = { ok: '✅', warn: '⚠️', fail: '❌', info: 'ℹ️' };
+
+function initSetupCheck() {
+  const btn = document.getElementById('btnRunSetupCheck');
+  if (btn) btn.addEventListener('click', () => openSetupCheck());
+}
+
+function renderSetupModal(bodyHtml) {
+  let modal = document.getElementById('setupCheckModal');
+  if (!modal) {
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="setupCheckModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 680px; width: 94vw;">
+          <div class="modal-header">
+            <h3>Setup Check</h3>
+            <button class="modal-close-btn" data-action="close-setup-check">&times;</button>
+          </div>
+          <div class="modal-body" id="setupCheckBody" style="padding: 16px; max-height: 70vh; overflow-y: auto;"></div>
+          <div class="modal-footer" style="padding: 12px 16px; justify-content: flex-end; gap: 8px;">
+            <button class="btn btn-outline" data-action="rerun-setup-check">Check again</button>
+            <button class="btn btn-primary" data-action="close-setup-check">Close</button>
+          </div>
+        </div>
+      </div>`);
+    modal = document.getElementById('setupCheckModal');
+  }
+  document.getElementById('setupCheckBody').innerHTML = bodyHtml;
+}
+
+async function openSetupCheck() {
+  renderSetupModal('<p class="setup-summary">Checking this PC…</p>');
+  fetch('/api/setup-check/seen', { method: 'POST' }).catch(() => {});
+  try {
+    const res = await fetch('/api/setup-check');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Setup check failed');
+    const problems = data.items.filter(i => i.status === 'fail').length;
+    const warnings = data.items.filter(i => i.status === 'warn').length;
+    const summary = problems
+      ? `${problems} thing${problems === 1 ? '' : 's'} to fix before going live.`
+      : (warnings ? 'Ready, with a few notes.' : 'Everything checked is ready.');
+    const rows = data.items.map((item) => {
+      const actions = [];
+      if (item.fix === 'league-timers') actions.push(`<button type="button" class="btn btn-xs btn-primary" data-action="setup-fix" data-fix="league-timers">Fix</button>`);
+      if (item.fix === 'download-collection') actions.push(`<button type="button" class="btn btn-xs btn-primary" data-action="setup-fix" data-fix="download-collection">Download</button>`);
+      if (item.fix === 'import-profile') {
+        actions.push(item.status === 'ok'
+          ? `<button type="button" class="btn btn-xs btn-outline" data-action="setup-fix" data-fix="import-profile" title="Load another profile file from your league admin">Import another</button>`
+          : `<button type="button" class="btn btn-xs btn-primary" data-action="setup-fix" data-fix="import-profile" title="Load the profile file from your league admin">Import profile</button>`);
+      }
+      if (typeof item.link === 'string' && item.link.startsWith('https://')) {
+        actions.push(`<a class="btn btn-xs btn-outline" href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">Open link</a>`);
+      }
+      return `<li class="setup-item ${cssToken(item.status)}">
+          <span>${SETUP_ICONS[item.status] || ''}</span>
+          <span class="setup-item-title">${escapeHtml(item.title)}</span>
+          <span class="setup-item-actions">${actions.join('')}</span>
+          <span class="setup-item-detail">${escapeHtml(item.detail)}</span>
+        </li>`;
+    }).join('');
+    renderSetupModal(`<p class="setup-summary"><strong>${escapeHtml(summary)}</strong></p><ul class="setup-list">${rows}</ul>`);
+  } catch (err) {
+    renderSetupModal(`<p class="setup-summary">Could not run the setup check: ${escapeHtml(err.message)}</p>`);
+  }
+}
+
+async function runSetupFix(fix, btn) {
+  if (fix === 'import-profile') {
+    // Swap Setup Check for the import window; closing that window brings Setup Check back.
+    if (!openImportModal) return;
+    const setupModal = document.getElementById('setupCheckModal');
+    if (setupModal) setupModal.remove();
+    importReturnsToSetupCheck = true;
+    openImportModal();
+    return;
+  }
+  if (fix === 'download-collection') {
+    await sceneCollectionAction('/api/updates/scene-collection/download', btn);
+    return;
+  }
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/setup-check/fix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: fix })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Fix failed');
+    showToast(data.changed && data.changed.length ? 'League esports timers turned on (a backup of game.cfg was kept).' : 'Already turned on.', 'success');
+  } catch (err) {
+    showToast(`Could not fix: ${err.message}`, 'error');
+  }
+  openSetupCheck();
+}
+
+/* ==========================================================================
+   SHARE A SCENE COLLECTION (admins)
+   ========================================================================== */
+function nextVersionSuggestion(v) {
+  const parts = String(v || '').replace(/^v/i, '').split('.').map(n => parseInt(n, 10));
+  if (!v || parts.some(isNaN)) return '1.0.0';
+  parts[parts.length - 1] += 1;
+  return parts.join('.');
+}
+
+function populateShareFields(config) {
+  const set = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
+  set('shareVersion', el => { el.value = config.lastPublishedVersion ? nextVersionSuggestion(config.lastPublishedVersion) : ''; });
+  set('shareMediaFolder', el => { el.value = config.publishMediaFolder || ''; });
+  set('shareLinks', el => { el.value = config.publishLinks || ''; });
+  set('shareLeagueTimers', el => { el.checked = config.publishLeagueTimers === true; });
+}
+
+/** Step 2 of the kit builder: review what the collection needs. */
+function renderKitReview(data) {
+  const box = document.getElementById('kitReview');
+  const rows = document.getElementById('kitPlugins');
+  if (!box || !rows) return;
+  rows.innerHTML = data.plugins.length ? data.plugins.map(p => `
+    <div class="kit-plugin-row" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}" data-dll="${escapeHtml(p.dll || '')}">
+      <label class="checkbox-label"><input type="checkbox" class="kit-plugin-required" ${p.required ? 'checked' : ''}><span>${escapeHtml(p.name)}</span></label>
+      <input type="text" class="kit-plugin-version" value="${escapeHtml(p.version || '')}" placeholder="Min version" aria-label="Minimum version" autocomplete="off" spellcheck="false">
+      <input type="text" inputmode="url" class="kit-plugin-url" value="${escapeHtml(p.url || '')}" placeholder="https:// download page" aria-label="Download page" autocomplete="off" spellcheck="false">
+    </div>`).join('') : '<span class="input-hint">No third-party plugins found on this PC or in this collection.</span>';
+  const unknown = document.getElementById('kitUnknownKinds');
+  if (unknown) {
+    unknown.textContent = data.unknownKinds.length
+      ? `This collection also uses these types that don't come with OBS: ${data.unknownKinds.join(', ')}. Tick the plugin that provides them.`
+      : '';
+    unknown.classList.toggle('hidden', !data.unknownKinds.length);
+  }
+  document.getElementById('kitFonts').value = data.fonts.join(', ');
+  box.classList.remove('hidden');
+}
+
+function kitReviewedRequirements() {
+  const box = document.getElementById('kitReview');
+  if (!box || box.classList.contains('hidden')) return {};
+  const plugins = [...document.querySelectorAll('.kit-plugin-row')]
+    .filter(r => r.querySelector('.kit-plugin-required').checked)
+    .map(r => ({
+      id: r.getAttribute('data-id'),
+      name: r.getAttribute('data-name'),
+      dll: r.getAttribute('data-dll'),
+      minVersion: r.querySelector('.kit-plugin-version').value.trim(),
+      url: r.querySelector('.kit-plugin-url').value.trim()
+    }));
+  const fonts = document.getElementById('kitFonts').value.split(',').map(f => f.trim()).filter(Boolean);
+  return { plugins, fonts };
+}
+
+/** Last step of the kit builder: does the hosted kit really work for a producer? */
+async function testKitLink() {
+  const input = document.getElementById('kitTestUrl');
+  const box = document.getElementById('kitTestResult');
+  const btn = document.getElementById('btnTestKitLink');
+  if (!input.value.trim()) {
+    showToast('Paste the link to your manifest.json first.', 'error');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Testing…';
+  try {
+    const res = await fetch('/api/publish/test-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: input.value.trim() })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Test failed');
+    input.value = data.url;
+    const rows = data.items.map(i => `<li>${i.ok ? '✅' : '❌'} ${escapeHtml(i.label)}: ${escapeHtml(i.detail)}</li>`).join('');
+    const next = data.ok
+      ? `<h5>Your kit works. Give it to your producers:</h5>
+         <ul>
+           <li><button type="button" class="btn btn-xs btn-primary" data-action="use-kit-link">Use this link in this profile</button></li>
+           <li>Then tick "Include Sheet ID &amp; Google API key" above if they need sheet access, press Export Profile, and send them that file with the SheetsToOBS installer.</li>
+           <li>They import the file and press Run setup check.</li>
+         </ul>`
+      : '<h5>Fix the ❌ items, then test again.</h5>';
+    box.innerHTML = `<ul class="kit-test-list">${rows}</ul>${next}`;
+    box.classList.remove('hidden');
+  } catch (err) {
+    showToast(`Could not test the link: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Test link';
+  }
+}
+
+async function useKitLink() {
+  const field = document.getElementById('cfgSceneCollectionManifestUrl');
+  field.value = document.getElementById('kitTestUrl').value.trim();
+  if (await saveConfig(false)) {
+    showToast('Saved as this profile\'s Scene Collection Update URL.', 'success');
+    checkSceneCollectionUpdate(false);
+  }
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Could not read the file.'));
+    reader.readAsText(file);
+  });
+}
+
+function initShareCollection() {
+  const btn = document.getElementById('btnPrepareShare');
+  if (!btn) return;
+  const testBtn = document.getElementById('btnTestKitLink');
+  if (testBtn) testBtn.addEventListener('click', testKitLink);
+  const picker = document.getElementById('shareCollectionFile');
+  if (picker) {
+    picker.addEventListener('change', async () => {
+      const chosen = picker.files && picker.files[0];
+      if (!chosen) return;
+      try {
+        const res = await fetch('/api/publish/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ collectionText: await readFileAsText(chosen) })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Could not read it');
+        renderKitReview(data);
+      } catch (err) {
+        showToast(`Could not read that export: ${err.message}`, 'error');
+      }
+    });
+  }
+  btn.addEventListener('click', async () => {
+    const fileInput = document.getElementById('shareCollectionFile');
+    const file = fileInput && fileInput.files && fileInput.files[0];
+    if (!file) {
+      showToast('Pick your OBS scene collection export first.', 'error');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Preparing…';
+    try {
+      const res = await fetch('/api/publish/prepare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          collectionText: await readFileAsText(file),
+          version: document.getElementById('shareVersion').value.trim(),
+          notes: document.getElementById('shareNotes').value.trim(),
+          mediaFolder: document.getElementById('shareMediaFolder').value.trim(),
+          links: document.getElementById('shareLinks').value,
+          leagueEsportsTimers: document.getElementById('shareLeagueTimers').checked,
+          blankUnlinked: document.getElementById('shareBlankUnlinked').checked,
+          ...kitReviewedRequirements()
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Failed');
+      renderShareResult(data);
+      showToast(`"${data.manifest.name}" v${data.manifest.version} is ready to upload.`, 'success');
+    } catch (err) {
+      showToast(`Could not prepare: ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Build Setup Kit';
+    }
+  });
+}
+
+function renderShareResult(data) {
+  const box = document.getElementById('shareResult');
+  if (!box) return;
+  const r = data.report;
+  const m = data.manifest;
+  const list = (items) => `<ul>${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
+  const parts = [];
+  parts.push(`<h5>✅ Saved to <code>${escapeHtml(data.outDir)}</code></h5>`);
+  parts.push(`<p>${escapeHtml(`${r.blanked.length} private URL(s) removed from sheet-linked sources (the sheet fills them in again on the first sync).`)}</p>`);
+  if (r.warnings.length) {
+    parts.push('<h5>⚠️ Private URLs still in the file</h5>');
+    parts.push(list(r.warnings.map(w => (w.source === '(outside sources)'
+      ? `A macro, transition or other setting (${escapeHtml(w.host)}): remove it in OBS and export again.`
+      : `${escapeHtml(w.source)} (${escapeHtml(w.host)}): link it to a sheet row, or tick "Also remove private URLs" and build again.`))));
+  }
+  if (r.needsSheetRow.length) {
+    parts.push('<h5>⚠️ These will be empty for producers</h5>');
+    parts.push('<p>Their private URL was removed, but their sheet row isn\'t a Browser row with a URL, so the sheet won\'t fill it back in. Set the row\'s Type to Browser and put the URL in Value.</p>');
+    parts.push(list(r.needsSheetRow.map(n => `${escapeHtml(n.source)} (row ${escapeHtml(n.row)})`)));
+  } else if (!r.sheetChecked && r.blanked.length) {
+    parts.push('<p>⚠️ Couldn\'t read this profile\'s sheet, so we couldn\'t confirm the sheet fills those URLs back in. Check that its rows are Browser rows with a URL.</p>');
+  }
+  if (r.blockedMedia.length) {
+    parts.push('<h5>Files left out of the kit (not pictures, video, sound or fonts)</h5>');
+    parts.push(list(r.blockedMedia.map(f => escapeHtml(f))));
+  }
+  parts.push('<h5>Media shipped with it</h5>');
+  parts.push(r.replaced.length
+    ? list(r.replaced.map(x => `${escapeHtml(x.file)} <small>(${x.count} path${x.count === 1 ? '' : 's'})</small>`))
+    : '<p>None. Set "Your media folder" to ship stingers, masks and sounds.</p>');
+  if (r.optional.length) {
+    parts.push('<h5>Optional (not shipped; producers see them as optional)</h5>');
+    parts.push(list(r.optional.map(x => escapeHtml(x.name))));
+  }
+  if (r.unusedMedia.length) {
+    parts.push('<h5>In your media folder but not used by this collection (not shipped)</h5>');
+    parts.push(list(r.unusedMedia.map(f => escapeHtml(f))));
+  }
+  const req = m.requirements;
+  parts.push('<h5>Producers\' Setup Check will require</h5>');
+  parts.push(list([
+    ...req.plugins.map(p => `${escapeHtml(p.name)}${p.minVersion ? ` ${escapeHtml(p.minVersion)}+` : ''}`),
+    req.fonts.length ? `Fonts: ${escapeHtml(req.fonts.join(', '))}` : '',
+    req.leagueEsportsTimers ? 'League esports timers' : ''
+  ].filter(Boolean)));
+  parts.push('<h5>Next steps</h5>');
+  parts.push(list([
+    'Upload everything in the output folder (manifest.json, the collection and the media folder), keeping the folders as they are. Any public https host works. For example, make a free public GitHub repo and use Add file › Upload files on its website. A private repo won\'t work, because producers\' PCs can\'t log in to it.',
+    'Copy the link to manifest.json and test it in step 3 below.'
+  ]));
+  box.innerHTML = parts.join('');
+  box.classList.remove('hidden');
+}
+
 function initExperimentalToggle() {
   const box = document.getElementById('chkExperimentalControlSheet');
   if (!box) return;
@@ -2643,6 +3265,40 @@ function initDelegatedActions() {
         break;
       case 'sort-sheet':
         handleSheetSort(el.getAttribute('data-sort-col'));
+        break;
+      case 'dismiss-banner': {
+        const b = document.getElementById(el.getAttribute('data-target') || '');
+        if (b) b.classList.add('hidden');
+        break;
+      }
+      case 'skip-app-update':
+        skipAppUpdate();
+        break;
+      case 'download-scene-collection':
+        sceneCollectionAction('/api/updates/scene-collection/download', el);
+        break;
+      case 'skip-scene-collection':
+        sceneCollectionAction('/api/updates/scene-collection/skip', el);
+        break;
+      case 'open-collections-folder':
+        fetch('/api/updates/open-folder', { method: 'POST' }).catch(() => {});
+        break;
+      case 'use-kit-link':
+        useKitLink();
+        break;
+      case 'open-publish-folder':
+        fetch('/api/publish/open-folder', { method: 'POST' }).catch(() => {});
+        break;
+      case 'close-setup-check': {
+        const m = document.getElementById('setupCheckModal');
+        if (m) m.remove();
+        break;
+      }
+      case 'rerun-setup-check':
+        openSetupCheck();
+        break;
+      case 'setup-fix':
+        runSetupFix(el.getAttribute('data-fix') || '', el);
         break;
       default:
         break;

@@ -1,5 +1,5 @@
 @echo off
-title Build OBS Sheets Live Windows Installer
+title Build SheetsToOBS Windows Installer
 cd /d "%~dp0"
 
 echo ========================================================

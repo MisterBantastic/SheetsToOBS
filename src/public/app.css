@@ -3083,3 +3083,86 @@ body.experimental-off .experimental-only { display: none !important; }
   margin-bottom: 8px;
   font-size: 0.8rem;
 }
+
+/* Scene collection safety lock banner */
+.collection-lock-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.14);
+  color: #fecaca;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  animation: collection-lock-pulse 2s ease-in-out infinite;
+}
+.collection-lock-banner strong { color: #f87171; font-size: 0.95rem; }
+.collection-lock-banner.hidden { display: none; }
+
+.update-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 0 0 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.55);
+  background: rgba(59, 130, 246, 0.12);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.update-banner.hidden { display: none; }
+.update-banner-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.update-banner-text strong { color: var(--accent-blue, #60a5fa); font-size: 0.92rem; }
+.update-banner-notes { color: var(--text-muted, #94a3b8); overflow-wrap: anywhere; white-space: pre-line; }
+.update-banner-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.update-banner-actions .hidden { display: none; }
+.update-check-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+
+/* Setup Check + Share a Scene Collection */
+.setup-check-card .panel-header,
+.share-collection-card > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.share-collection-card > summary { cursor: pointer; list-style: none; }
+.share-collection-card > summary::-webkit-details-marker { display: none; }
+.share-collection-card > summary h3::before { content: '▸ '; color: var(--text-muted, #94a3b8); }
+.share-collection-card[open] > summary h3::before { content: '▾ '; }
+.share-collection-card textarea {
+  width: 100%;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 9px 14px;
+  font-size: 0.875rem;
+}
+.share-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.kit-review.hidden { display: none; }
+.kit-review { display: flex; flex-direction: column; gap: 6px; }
+.kit-plugins { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+.kit-plugin-row { display: grid; grid-template-columns: minmax(150px, 1.2fr) 90px minmax(150px, 2fr); gap: 8px; align-items: center; font-size: 0.85rem; }
+.kit-plugin-row .checkbox-label { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .kit-plugin-row { grid-template-columns: 1fr; } }
+.share-result { font-size: 0.85rem; line-height: 1.5; }
+.share-result.hidden { display: none; }
+.share-result h5 { margin: 12px 0 4px; font-size: 0.85rem; }
+.share-result ul { margin: 0 0 0 18px; padding: 0; }
+.share-result code { overflow-wrap: anywhere; }
+.setup-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.setup-item { display: grid; grid-template-columns: 24px 1fr auto; gap: 4px 10px; align-items: start; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); }
+.setup-item.fail { border-color: rgba(239, 68, 68, 0.5); background: rgba(239, 68, 68, 0.08); }
+.setup-item.warn { border-color: rgba(245, 158, 11, 0.5); background: rgba(245, 158, 11, 0.08); }
+.setup-item-title { font-weight: 600; }
+.setup-item-detail { grid-column: 2; color: var(--text-muted, #94a3b8); font-size: 0.82rem; overflow-wrap: anywhere; }
+.setup-item-actions { grid-column: 3; grid-row: 1 / span 2; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.setup-summary { margin: 0 0 12px; font-size: 0.9rem; }
+@keyframes collection-lock-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.0); }
+  50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25); }
+}
