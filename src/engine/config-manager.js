@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { APP_DIR, dataFile } = require('../paths');
+const { normalizeManifestUrl } = require('./scene-share');
 
 const DEFAULT_PROFILE_CONFIG = {
   sheetId: '',
@@ -17,6 +18,20 @@ const DEFAULT_PROFILE_CONFIG = {
   showVisibilityLogs: true,
   logMissingRowsOnlyOnChanges: true,
   showMissingRowLogs: false,
+  // Safety lock: only sync when OBS has this scene collection open ('' = any collection)
+  requiredSceneCollection: '',
+  // Optional https:// manifest describing the newest scene collection export, and
+  // the version last downloaded on this PC, and a version the user chose to ignore.
+  sceneCollectionManifestUrl: '',
+  sceneCollectionVersion: '',
+  sceneCollectionSkippedVersion: '',
+  // Where this PC keeps the collection's media files ('' = data folder\media\<name>).
+  mediaFolder: '',
+  // Admin only: "Prepare for sharing" settings.
+  publishMediaFolder: '',
+  lastPublishedVersion: '',
+  publishLinks: '',
+  publishLeagueTimers: false,
   // Web Dashboard (control sheet) settings
   controlTabName: 'Stream1',
   scriptUrl: '',
@@ -31,7 +46,7 @@ const PERSONAL_KEYS = ['apikey', 'obsauth', 'scriptToken'];
 // Keys that belong to the whole app, never to a single profile. The GUI sends
 // some of them back with a profile save; they are filtered out there.
 const GLOBAL_KEYS = ['activeProfile', 'profilesList', 'permissions', 'minimizeToTray', 'theme',
-  'experimentalControlSheet', 'lanAccessCode'];
+  'experimentalControlSheet', 'lanAccessCode', 'checkForAppUpdates', 'skippedAppVersion', 'setupCheckShownVersion'];
 
 /** Experimental Control Sheet / Web Dashboard: off unless switched on. */
 function experimentalFromEnv() {
@@ -41,6 +56,31 @@ function experimentalFromEnv() {
 function isSafeProfileName(name) {
   return typeof name === 'string' && name.length > 0 && name.length <= 100 &&
     !['__proto__', 'constructor', 'prototype'].includes(name);
+}
+
+// Settings that describe one PC (its folders, what it has downloaded, whether it
+// is open to the network). A profile from someone else never sets them.
+const LOCAL_PC_DEFAULTS = {
+  mediaFolder: '',
+  publishMediaFolder: '',
+  lastPublishedVersion: '',
+  publishLinks: '',
+  publishLeagueTimers: false,
+  sceneCollectionVersion: '',
+  sceneCollectionSkippedVersion: '',
+  allowLanDashboard: false
+};
+
+const SCRIPT_URL_RE = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/;
+
+/** True when an OBS WebSocket address points at this PC. */
+function isLocalObsAddress(address) {
+  try {
+    const host = new URL(String(address || '')).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    return host === 'localhost' || host === '::1' || /^127\.\d+\.\d+\.\d+$/.test(host);
+  } catch (e) {
+    return false;
+  }
 }
 
 function newAccessCode() {
@@ -132,6 +172,18 @@ class ConfigManager {
 
   static experimentalForcedByEnv() {
     return experimentalFromEnv();
+  }
+
+  /** App update check settings (app-wide). */
+  setUpdateSettings(patch) {
+    const full = this.getFullData();
+    if (typeof patch.checkForAppUpdates === 'boolean') full.checkForAppUpdates = patch.checkForAppUpdates;
+    if (typeof patch.skippedAppVersion === 'string') full.skippedAppVersion = patch.skippedAppVersion.slice(0, 40);
+    if (typeof patch.setupCheckShownVersion === 'string') full.setupCheckShownVersion = patch.setupCheckShownVersion.slice(0, 40);
+    const res = this.saveFullData(full);
+    return res.success
+      ? { success: true, checkForAppUpdates: full.checkForAppUpdates !== false, skippedAppVersion: full.skippedAppVersion || '' }
+      : res;
   }
 
   rotateLanAccessCode() {
@@ -266,7 +318,10 @@ class ConfigManager {
       minimizeToTray: full.minimizeToTray,
       theme: full.theme,
       experimentalControlSheet: experimentalFromEnv() || full.experimentalControlSheet === true,
-      experimentalForced: experimentalFromEnv()
+      experimentalForced: experimentalFromEnv(),
+      checkForAppUpdates: full.checkForAppUpdates !== false,
+      skippedAppVersion: full.skippedAppVersion || '',
+      setupCheckShownVersion: full.setupCheckShownVersion || ''
     };
   }
 
@@ -343,6 +398,12 @@ class ConfigManager {
 
       if (sanitized.sheetId) {
         sanitized.sheetId = ConfigManager.extractSheetId(sanitized.sheetId);
+      }
+      if (typeof sanitized.sceneCollectionManifestUrl === 'string') {
+        sanitized.sceneCollectionManifestUrl = normalizeManifestUrl(sanitized.sceneCollectionManifestUrl);
+        if (sanitized.sceneCollectionManifestUrl && !/^https:\/\/[^\s]+$/i.test(sanitized.sceneCollectionManifestUrl)) {
+          return { success: false, error: 'Scene Collection Update URL must start with https://' };
+        }
       }
       if (sanitized.polling !== undefined) {
         let p = parseInt(sanitized.polling, 10);
@@ -563,6 +624,14 @@ class ConfigManager {
       if (!(opts.includeSheetAccess && k === 'apikey')) delete p[k];
     });
     if (!opts.includeSheetAccess) p.sheetId = '';
+    // What this PC has installed or ignored, and its local folders, are not part of the setup.
+    p.sceneCollectionVersion = '';
+    p.sceneCollectionSkippedVersion = '';
+    p.mediaFolder = '';
+    p.publishMediaFolder = '';
+    p.lastPublishedVersion = '';
+    p.publishLinks = '';
+    p.publishLeagueTimers = false;
     p.obsaddress = 'ws://localhost:4455';
     return p;
   }
@@ -570,7 +639,7 @@ class ConfigManager {
   /**
    * Import profile(s) from JSON object
    */
-  importData(importedJson, overrideName = null) {
+  importData(importedJson, overrideName = null, opts = {}) {
     try {
       if (!importedJson || typeof importedJson !== 'object') {
         return { success: false, error: 'Invalid JSON data.' };
@@ -583,23 +652,54 @@ class ConfigManager {
       const fallbackObsAuth = currentActive.obsauth || '';
       const fallbackScriptToken = currentActive.scriptToken || '';
 
+      // Only this app's own Full Backup may restore this-PC settings (folders, LAN access).
+      const isFullBackup = importedJson.includePersonal === true;
+
       const sanitizeImport = (prof) => {
         const merged = { ...DEFAULT_PROFILE_CONFIG, ...prof };
         GLOBAL_KEYS.forEach(k => delete merged[k]);
+        if (!isFullBackup) Object.assign(merged, LOCAL_PC_DEFAULTS);
+        // Addresses the app will contact must look right, whoever wrote the file.
+        if (typeof merged.scriptUrl !== 'string' || (merged.scriptUrl && !SCRIPT_URL_RE.test(merged.scriptUrl))) {
+          merged.scriptUrl = '';
+          merged.scriptToken = '';
+        }
+        const manifestUrl = typeof merged.sceneCollectionManifestUrl === 'string' ? normalizeManifestUrl(merged.sceneCollectionManifestUrl) : '';
+        merged.sceneCollectionManifestUrl = /^https:\/\/[^\s]+$/i.test(manifestUrl) ? manifestUrl : '';
+        if (typeof merged.obsaddress !== 'string') merged.obsaddress = '';
         // If imported profile is a clean export (no personal API key / OBS password), inherit local user credentials
         if (!merged.apikey && fallbackApiKey) merged.apikey = fallbackApiKey;
-        if (!merged.obsauth && fallbackObsAuth) merged.obsauth = fallbackObsAuth;
-        if (!merged.scriptToken && fallbackScriptToken && merged.scriptUrl === currentActive.scriptUrl) {
-          merged.scriptToken = fallbackScriptToken;
-        }
         if ((!merged.obsaddress || merged.obsaddress === 'ws://localhost:4455') && fallbackObsAddress) {
           merged.obsaddress = fallbackObsAddress;
+        }
+        // This PC's OBS password is only reused for OBS on this PC (or the address it
+        // is already used with), never for an address that came with the file.
+        const sameObs = merged.obsaddress === fallbackObsAddress || isLocalObsAddress(merged.obsaddress);
+        if (!merged.obsauth && fallbackObsAuth && sameObs) merged.obsauth = fallbackObsAuth;
+        if (!merged.scriptToken && fallbackScriptToken && merged.scriptUrl && merged.scriptUrl === currentActive.scriptUrl) {
+          merged.scriptToken = fallbackScriptToken;
         }
         return merged;
       };
 
+      // Replacing a profile that already exists needs a clear yes (opts.overwrite).
+      const wouldReplace = (names) => {
+        const existing = names.filter(n => Object.prototype.hasOwnProperty.call(full.profiles, n));
+        if (!existing.length || opts.overwrite === true) return null;
+        return {
+          success: false,
+          code: 'PROFILE_EXISTS',
+          existing,
+          error: existing.length === 1
+            ? `A profile named "${existing[0]}" already exists. Give the imported one another name, or confirm that it should be replaced.`
+            : `These profiles already exist and would be replaced: ${existing.join(', ')}.`
+        };
+      };
+
       // Case 1: Multi-profile export bundle
       if (importedJson.type === 'all-profiles' && importedJson.profiles) {
+        const clash = wouldReplace(Object.keys(importedJson.profiles).filter(isSafeProfileName));
+        if (clash) return clash;
         let count = 0;
         for (const [name, prof] of Object.entries(importedJson.profiles)) {
           if (prof && typeof prof === 'object' && isSafeProfileName(name)) {
@@ -619,6 +719,8 @@ class ConfigManager {
       if (importedJson.type === 'single-profile' && importedJson.config) {
         const targetName = overrideName || importedJson.profileName || 'Imported Profile';
         if (!isSafeProfileName(targetName)) return { success: false, error: 'Invalid profile name.' };
+        const clash = wouldReplace([targetName]);
+        if (clash) return clash;
         full.profiles[targetName] = sanitizeImport(importedJson.config);
         full.activeProfile = targetName;
         const saveRes = this.saveFullData(full);
@@ -630,6 +732,8 @@ class ConfigManager {
       if (importedJson.sheetId !== undefined || importedJson.obsaddress !== undefined) {
         const targetName = overrideName || 'Imported Config';
         if (!isSafeProfileName(targetName)) return { success: false, error: 'Invalid profile name.' };
+        const clash = wouldReplace([targetName]);
+        if (clash) return clash;
         full.profiles[targetName] = sanitizeImport(importedJson);
         full.activeProfile = targetName;
         const saveRes = this.saveFullData(full);
@@ -667,5 +771,6 @@ class ConfigManager {
 }
 
 ConfigManager.PERSONAL_KEYS = PERSONAL_KEYS;
+ConfigManager.isLocalObsAddress = isLocalObsAddress;
 ConfigManager.GLOBAL_KEYS = GLOBAL_KEYS;
 module.exports = ConfigManager;

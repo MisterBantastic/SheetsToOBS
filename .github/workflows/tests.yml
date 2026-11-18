@@ -1,0 +1,25 @@
+# Runs the test suite on every push and pull request.
+# The private suites (Apps Script, Control Sheet fixtures) are not in this
+# repository; tests/run.js skips them when their files are missing.
+name: Tests
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test

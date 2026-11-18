@@ -5,11 +5,7 @@ let axios = null;
 try {
   axios = require('axios');
 } catch (e) {
-  try {
-    axios = require('../../obs-google-sheet-importer-master/node_modules/axios');
-  } catch (err) {
-    axios = null;
-  }
+  axios = null; // httpGetJson falls back to the built-in fetch
 }
 
 let OBSWebSocket = null;
@@ -17,12 +13,7 @@ try {
   const mod = require('obs-websocket-js');
   OBSWebSocket = mod.default || mod;
 } catch (e) {
-  try {
-    const mod = require('../../obs-google-sheet-importer-master/node_modules/obs-websocket-js');
-    OBSWebSocket = mod.default || mod;
-  } catch (err) {
-    OBSWebSocket = null;
-  }
+  OBSWebSocket = null; // reported in the app when connecting
 }
 
 class ImporterEngine extends EventEmitter {
@@ -42,6 +33,8 @@ class ImporterEngine extends EventEmitter {
     this.visibilityStateMap = new Map();
     // Track previous missing row warnings to suppress unchanged spam
     this.missingRowsWarned = new Set();
+    // Sources whose sheet row has a type we don't know (warned once each)
+    this.unknownTypeWarned = new Set();
 
     this.obsStatus = {
       connected: false,
@@ -52,8 +45,14 @@ class ImporterEngine extends EventEmitter {
       lastConnected: null,
       error: null,
       activeScenesCount: 0,
-      monitoredSourcesCount: 0
+      monitoredSourcesCount: 0,
+      // Scene collection safety lock
+      sceneCollection: '',
+      requiredSceneCollection: '',
+      sceneCollectionMismatch: false
     };
+    this.sceneCollectionChanging = false;
+    this.lastCollectionCheckKey = null;
 
     this.sheetStatus = {
       state: 'idle', // 'idle' | 'fetching' | 'success' | 'error'
@@ -71,6 +70,14 @@ class ImporterEngine extends EventEmitter {
     this.lastJsonString = '';
     this.lastSyncDiffs = [];
     this.lastSyncTimestamp = null;
+
+    // Input settings read in one batch at the start of a sync cycle (null between cycles).
+    this.cycleSettings = null;
+    // Google Sheet errors: retry less often, and log each different error once.
+    this.sheetErrorCount = 0;
+    this.sheetRetryAt = 0;
+    this.lastSheetErrorLogged = '';
+    this.lastCycleError = '';
   }
 
   log(level, message, details = null) {
@@ -122,6 +129,17 @@ class ImporterEngine extends EventEmitter {
     const g = clean.substring(2, 4);
     const b = clean.substring(4, 6);
     return parseInt('ff' + b + g + r, 16);
+  }
+
+  /**
+   * The type in column C as the importer knows it, whatever its letter case or
+   * spacing ("text", "TEXT", "Source Switcher"...). Empty means Text, as before.
+   * Returns null for a type the importer doesn't know (usually a typo).
+   */
+  static normalizeType(raw) {
+    const key = String(raw === undefined || raw === null ? '' : raw).trim().toLowerCase().replace(/[\s_-]+/g, '');
+    if (!key) return 'Text';
+    return Object.prototype.hasOwnProperty.call(ImporterEngine.KNOWN_TYPES, key) ? ImporterEngine.KNOWN_TYPES[key] : null;
   }
 
   /**
@@ -329,6 +347,7 @@ class ImporterEngine extends EventEmitter {
       this.simulationTimer = null;
     }
     this.missingRowsWarned.clear();
+    this.unknownTypeWarned.clear();
     if (this.obs && this.obsStatus.connected) {
       try {
         await this.obs.disconnect();
@@ -355,6 +374,7 @@ class ImporterEngine extends EventEmitter {
 
   startPollingTimer() {
     if (this.timer) clearInterval(this.timer);
+    this.sheetRetryAt = 0;
     const config = this.configManager.load();
     let interval = parseInt(config.polling, 10);
     if (!interval || isNaN(interval)) interval = 2000;
@@ -367,6 +387,62 @@ class ImporterEngine extends EventEmitter {
         });
       }
     }, interval);
+  }
+
+  /** Names match ignoring case and surrounding spaces. */
+  static sameCollectionName(a, b) {
+    return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  }
+
+  /**
+   * Scene collection safety lock. When the profile names a required scene
+   * collection, nothing is sent to OBS unless that collection is the one open.
+   * Returns true when syncing is allowed. Logs once each time the state changes.
+   */
+  async checkSceneCollection(config = null) {
+    const cfg = config || this.configManager.load();
+    const required = String(cfg.requiredSceneCollection || '').trim();
+    this.obsStatus.requiredSceneCollection = required;
+
+    if (this.sceneCollectionChanging) {
+      this.obsStatus.sceneCollectionMismatch = true;
+      return false;
+    }
+
+    let current = '';
+    try {
+      const res = await this.obs.call('GetSceneCollectionList');
+      current = (res && res.currentSceneCollectionName) || '';
+    } catch (e) {
+      // Can't tell which collection is open: only block if a lock is configured.
+      this.obsStatus.sceneCollection = '';
+      this.obsStatus.sceneCollectionMismatch = !!required;
+      if (required) this.reportCollectionState(`unknown|${required}`, 'error',
+        `Scene collection lock: could not read the open scene collection (${e.message}). Nothing will be sent to OBS.`);
+      return !required;
+    }
+
+    this.obsStatus.sceneCollection = current;
+    const ok = !required || ImporterEngine.sameCollectionName(current, required);
+    this.obsStatus.sceneCollectionMismatch = !ok;
+
+    if (!required) {
+      this.reportCollectionState(`any|${current}`, null, null);
+    } else if (ok) {
+      this.reportCollectionState(`ok|${current}`, 'obs', `Scene collection "${current}" matches this profile. Syncing is allowed.`);
+    } else {
+      this.reportCollectionState(`bad|${current}|${required}`, 'error',
+        `WRONG SCENE COLLECTION: OBS has "${current}" open, but profile "${cfg.activeProfile || ''}" requires "${required}". ` +
+        'Nothing will be sent to OBS until you switch collections in OBS (Scene Collection menu) or change the requirement in Profile Settings.');
+    }
+    return ok;
+  }
+
+  reportCollectionState(key, level, message) {
+    if (key === this.lastCollectionCheckKey) return;
+    this.lastCollectionCheckKey = key;
+    if (level && message) this.log(level, message);
+    this.emitStatus();
   }
 
   /**
@@ -463,6 +539,22 @@ class ImporterEngine extends EventEmitter {
       this.obs.on('ConnectionError', (err) => {
         this.handleObsDisconnect(`Connection error: ${err.message}`);
       });
+      // Scene collection lock: stop immediately while OBS switches collections,
+      // then re-check (and sync, if allowed) once the new one is loaded.
+      this.obs.on('CurrentSceneCollectionChanging', () => {
+        this.sceneCollectionChanging = true;
+        this.obsStatus.sceneCollectionMismatch = true;
+        this.emitStatus();
+      });
+      this.obs.on('CurrentSceneCollectionChanged', () => {
+        this.sceneCollectionChanging = false;
+        this.visibilityStateMap.clear();
+        this.checkSceneCollection()
+          .then(ok => { if (ok && this.isRunning) return this.updateCycle(); })
+          .catch(() => {});
+      });
+      this.sceneCollectionChanging = false;
+      this.lastCollectionCheckKey = null;
 
       // Initial sync right after connect
       this.updateCycle().catch(e => console.error(e));
@@ -504,6 +596,94 @@ class ImporterEngine extends EventEmitter {
         await this.connectOBS();
       }
     }, delay);
+  }
+
+  /**
+   * Sends several read requests to OBS in one round trip (falls back to one call
+   * each). Returns [{ ok, data, error }] in the order of `requests`.
+   */
+  async obsReadMany(requests) {
+    if (!requests.length) return [];
+    if (this.obs && typeof this.obs.callBatch === 'function') {
+      try {
+        const res = await this.obs.callBatch(requests.map((r, i) => ({
+          requestType: r.requestType,
+          requestId: String(i),
+          requestData: r.requestData
+        })));
+        const byId = new Map((Array.isArray(res) ? res : []).map(m => [String(m.requestId), m]));
+        if (requests.every((r, i) => byId.has(String(i)))) {
+          return requests.map((r, i) => {
+            const m = byId.get(String(i));
+            return m.requestStatus && m.requestStatus.result
+              ? { ok: true, data: m.responseData || {} }
+              : { ok: false, error: (m.requestStatus && m.requestStatus.comment) || `${r.requestType} failed` };
+          });
+        }
+      } catch (e) { /* fall back to single calls below */ }
+    }
+    const out = [];
+    for (const r of requests) {
+      try {
+        out.push({ ok: true, data: (await this.obs.call(r.requestType, r.requestData)) || {} });
+      } catch (e) {
+        out.push({ ok: false, error: e.message || String(e) });
+      }
+    }
+    return out;
+  }
+
+  /** An input's settings: from this cycle's batch when there is one, else asked from OBS. */
+  async getInputSettings(inputName) {
+    const cached = this.cycleSettings && this.cycleSettings.get(inputName);
+    if (cached) {
+      if (!cached.ok) throw new Error(cached.error);
+      return cached.data;
+    }
+    return this.obs.call('GetInputSettings', { inputName });
+  }
+
+  /** Writes input settings and keeps this cycle's copy in step (the same input can sit in several scenes). */
+  async setInputSettings(inputName, inputSettings) {
+    await this.obs.call('SetInputSettings', { inputName, inputSettings });
+    const cached = this.cycleSettings && this.cycleSettings.get(inputName);
+    if (cached && cached.ok) {
+      cached.data = { ...cached.data, inputSettings: { ...(cached.data.inputSettings || {}), ...inputSettings } };
+    }
+  }
+
+  /**
+   * May a delayed Image/Video change still be sent? Not after Stop, a reconnect
+   * or a scene collection switch: the scene collection lock must hold for
+   * delayed changes too. `obs` and `collection` are the ones in use when the
+   * change was scheduled.
+   */
+  delayedWriteAllowed(obs, collection) {
+    return this.isRunning && this.obs === obs && this.obsStatus.connected &&
+      !this.sceneCollectionChanging && !this.obsStatus.sceneCollectionMismatch &&
+      this.obsStatus.sceneCollection === collection;
+  }
+
+  /** After a failed sheet read: wait longer before each retry (up to 2 minutes). */
+  noteSheetError(err) {
+    const status = err && err.response && err.response.status;
+    const base = status === 429 || status === 403 ? 30000 : 5000; // quota / access problems: start slower
+    const delay = Math.min(120000, base * Math.pow(2, Math.min(this.sheetErrorCount, 5)));
+    this.sheetErrorCount++;
+    this.sheetRetryAt = Date.now() + delay;
+    if (this.sheetErrorCount === 1) {
+      this.log('warn', 'Google Sheet could not be read. Retrying less often until it answers again (Sync Now retries straight away).');
+    }
+    return delay;
+  }
+
+  noteSheetOk() {
+    if (this.sheetErrorCount > 0) {
+      this.log('sheet', `Google Sheet is readable again (after ${this.sheetErrorCount} failed attempt${this.sheetErrorCount === 1 ? '' : 's'}).`);
+    }
+    this.sheetErrorCount = 0;
+    this.sheetRetryAt = 0;
+    this.lastSheetErrorLogged = '';
   }
 
   /**
@@ -561,8 +741,14 @@ class ImporterEngine extends EventEmitter {
       const msg = `Missing Sheet ID or API Key in profile "${config.activeProfile || 'CCS1'}".`;
       this.sheetStatus.state = 'error';
       this.sheetStatus.error = msg;
+      if (msg !== this.lastSheetErrorLogged) {
+        this.lastSheetErrorLogged = msg;
+        this.log('error', msg);
+      }
       this.emitStatus();
-      throw new Error(msg);
+      const missing = new Error(msg);
+      missing.logged = true;
+      throw missing;
     }
 
     this.sheetStatus.state = 'fetching';
@@ -628,7 +814,11 @@ class ImporterEngine extends EventEmitter {
         errMsg = `API ${err.response.data.error.code}: ${err.response.data.error.message}`;
       }
       this.sheetStatus.error = errMsg;
-      this.log('error', `Google Sheet Fetch Error: ${errMsg}`);
+      if (errMsg !== this.lastSheetErrorLogged) {
+        this.lastSheetErrorLogged = errMsg;
+        this.log('error', `Google Sheet Fetch Error: ${errMsg}`);
+      }
+      err.logged = true;
       this.emitStatus();
       throw err;
     }
@@ -637,7 +827,7 @@ class ImporterEngine extends EventEmitter {
   /**
    * Main synchronization update cycle
    */
-  async updateCycle() {
+  async updateCycle(opts = {}) {
     if (this.isUpdating) return;
     this.isUpdating = true;
 
@@ -647,7 +837,26 @@ class ImporterEngine extends EventEmitter {
       }
 
       const config = this.configManager.load();
-      const data = await this.fetchSheetData();
+
+      // Scene collection lock: do nothing to OBS (not even read the sheet) in the wrong collection.
+      if (!(await this.checkSceneCollection(config))) {
+        this.sources = [];
+        this.emit('sources:mapped', this.sources);
+        this.emitStatus();
+        return;
+      }
+
+      // After a failed sheet read, polls are skipped until the retry time (Sync Now forces one).
+      if (!opts.force && Date.now() < this.sheetRetryAt) return;
+
+      let data;
+      try {
+        data = await this.fetchSheetData();
+      } catch (sheetErr) {
+        this.noteSheetError(sheetErr);
+        throw sheetErr;
+      }
+      this.noteSheetOk();
 
       // Check if data changed
       const currentJson = JSON.stringify(data);
@@ -682,21 +891,27 @@ class ImporterEngine extends EventEmitter {
       const discoveredSources = [];
       let monitoredCount = 0;
 
-      for (const scene of sceneNameList) {
-        let allSources;
-        try {
-          if (scene[1] === 0) {
-            allSources = await this.obs.call('GetSceneItemList', { sceneName: scene[0] });
-          } else {
-            allSources = await this.obs.call('GetGroupSceneItemList', { sceneName: scene[0] });
-          }
-        } catch (itemErr) {
-          continue;
-        }
+      // Two round trips to OBS instead of one per scene and one per source:
+      // every scene's item list, then the settings of every "|sheet" input.
+      const sceneReads = await this.obsReadMany(sceneNameList.map(s => ({
+        requestType: s[1] === 0 ? 'GetSceneItemList' : 'GetGroupSceneItemList',
+        requestData: { sceneName: s[0] }
+      })));
+      const sceneItemLists = sceneReads.map(r => (r.ok && Array.isArray(r.data.sceneItems) ? r.data.sceneItems : []));
+      const inputNames = [...new Set(sceneItemLists.flat()
+        .map(item => item && item.sourceName)
+        .filter(name => name && name.includes('|sheet')))];
+      const settingReads = await this.obsReadMany(inputNames.map(inputName => ({
+        requestType: 'GetInputSettings',
+        requestData: { inputName }
+      })));
+      this.cycleSettings = new Map(inputNames.map((name, i) => [name, settingReads[i]]));
+      const sheetRowByNumber = new Map(this.rawSheetData.map(r => [r.row, r]));
 
-        if (!allSources || !allSources.sceneItems) continue;
+      for (let sceneIndex = 0; sceneIndex < sceneNameList.length; sceneIndex++) {
+        const scene = sceneNameList[sceneIndex];
 
-        for (const source of allSources.sceneItems) {
+        for (const source of sceneItemLists[sceneIndex]) {
           if (source.sourceName && source.sourceName.includes('|sheet')) {
             monitoredCount++;
             const reference = source.sourceName.split('|sheet')[1].trim();
@@ -717,7 +932,7 @@ class ImporterEngine extends EventEmitter {
             const parsedTags = ImporterEngine.parseCellTags(rawCellValue);
             const cleanVal = parsedTags.cleanValue;
 
-            const sheetRow = this.rawSheetData.find(r => r.row === targetRow);
+            const sheetRow = sheetRowByNumber.get(targetRow);
             const expectedLabel = sheetRow ? sheetRow.label : '';
             const expectedFullName = sheetRow ? (sheetRow.ezSheetId || (expectedLabel ? `${expectedLabel} |sheet ${targetRow}` : '')) : '';
             const nameCheck = ImporterEngine.compareSourceName(source.sourceName, targetRow, expectedLabel, expectedFullName);
@@ -789,10 +1004,20 @@ class ImporterEngine extends EventEmitter {
         this.log('sheet', `Google Sheet updated (${config.activeProfile || 'CCS1'}): ${this.rawSheetData.length} rows parsed, ${monitoredCount} OBS sources monitored.`);
       }
 
+      this.lastCycleError = '';
       this.emitStatus();
     } catch (err) {
-      // Handled in sub-methods
+      // Sheet errors are logged where they happen; anything else (an OBS request
+      // that failed, a bug) is logged here, once per different message.
+      if (!err || !err.logged) {
+        const msg = (err && err.message) || String(err);
+        if (msg !== this.lastCycleError) {
+          this.lastCycleError = msg;
+          this.log('error', `Sync cycle failed: ${msg}`);
+        }
+      }
     } finally {
+      this.cycleSettings = null;
       this.isUpdating = false;
     }
   }
@@ -800,8 +1025,10 @@ class ImporterEngine extends EventEmitter {
   /**
    * Apply individual source update based on type with smart visibility state tracking & log deduping
    */
-  async applySourceUpdate(sceneName, source, sourcetype, rawCellValue, tags, sourceInfo, config = null) {
+  async applySourceUpdate(sceneName, source, sheetType, rawCellValue, tags, sourceInfo, config = null) {
     const cfg = config || this.configManager.load();
+    const sourcetype = ImporterEngine.normalizeType(sheetType);
+    if (sourcetype) sourceInfo.sourceType = sourcetype;
     const { cleanValue, color, fontstyle, visibility } = tags;
     const showVisLogs = cfg.showVisibilityLogs !== false;
     const logOnlyChanges = cfg.logVisibilityOnlyOnChanges !== false;
@@ -835,9 +1062,21 @@ class ImporterEngine extends EventEmitter {
       }
     }
 
+    // A type we don't know (usually a typo in column C): say so instead of silently
+    // doing nothing. A ?hide / ?show tag above still works.
+    if (!sourcetype) {
+      sourceInfo.warning = `Unknown type "${String(sheetType).trim()}" in column C. Use Text, Color, Image, Video, Browser, HS or SourceSwitcher.`;
+      const warnKey = `${source.sourceName}::${sheetType}`;
+      if (!this.unknownTypeWarned.has(warnKey)) {
+        this.unknownTypeWarned.add(warnKey);
+        this.log('warn', `'${source.sourceName}': ${sourceInfo.warning} Its value is not sent to OBS.`);
+      }
+      return;
+    }
+
     // Text Source
     if (sourcetype === 'Text') {
-      let textsettings = await this.obs.call('GetInputSettings', { inputName: source.sourceName });
+      let textsettings = await this.getInputSettings(source.sourceName);
       let oldText = textsettings.inputSettings ? textsettings.inputSettings.text : '';
       let oldColor = textsettings.inputSettings ? textsettings.inputSettings.color : null;
       let oldFont = textsettings.inputSettings ? textsettings.inputSettings.font : {};
@@ -858,10 +1097,7 @@ class ImporterEngine extends EventEmitter {
           newSettings.font.flags = fontstyle;
         }
 
-        await this.obs.call('SetInputSettings', {
-          inputName: source.sourceName,
-          inputSettings: newSettings
-        });
+        await this.setInputSettings(source.sourceName, newSettings);
 
         if (cleanValue !== oldText) {
           this.log('diff', `[Text] '${source.sourceName}' updated: "${oldText}" -> "${cleanValue}"`);
@@ -879,15 +1115,12 @@ class ImporterEngine extends EventEmitter {
       if (rawCellValue) {
         const obsColor = ImporterEngine.hexToObsColor(rawCellValue);
         if (obsColor !== null) {
-          let colorsettings = await this.obs.call('GetInputSettings', { inputName: source.sourceName });
+          let colorsettings = await this.getInputSettings(source.sourceName);
           let oldColor = colorsettings.inputSettings ? colorsettings.inputSettings.color : null;
           sourceInfo.currentObsValue = oldColor ? `#${oldColor.toString(16)}` : '';
 
           if (obsColor !== oldColor) {
-            await this.obs.call('SetInputSettings', {
-              inputName: source.sourceName,
-              inputSettings: { color: obsColor }
-            });
+            await this.setInputSettings(source.sourceName, { color: obsColor });
             this.log('diff', `[Color] '${source.sourceName}' updated color to ${rawCellValue}`);
             this.recordDiff(source.sourceName, 'Color', sourceInfo.currentObsValue || 'None', rawCellValue);
             sourceInfo.currentObsValue = rawCellValue;
@@ -904,15 +1137,12 @@ class ImporterEngine extends EventEmitter {
 
     // Browser Source
     else if (sourcetype === 'Browser') {
-      let browsersettings = await this.obs.call('GetInputSettings', { inputName: source.sourceName });
+      let browsersettings = await this.getInputSettings(source.sourceName);
       let oldUrl = browsersettings.inputSettings ? browsersettings.inputSettings.url : '';
       sourceInfo.currentObsValue = oldUrl;
 
       if (cleanValue !== oldUrl) {
-        await this.obs.call('SetInputSettings', {
-          inputName: source.sourceName,
-          inputSettings: { url: cleanValue }
-        });
+        await this.setInputSettings(source.sourceName, { url: cleanValue });
         this.log('diff', `[Browser] '${source.sourceName}' updated url: ${cleanValue}`);
         this.recordDiff(source.sourceName, 'Browser', oldUrl, cleanValue);
         sourceInfo.currentObsValue = cleanValue;
@@ -955,7 +1185,7 @@ class ImporterEngine extends EventEmitter {
 
       let switcherSettings = null;
       try {
-        switcherSettings = await this.obs.call('GetInputSettings', { inputName: source.sourceName });
+        switcherSettings = await this.getInputSettings(source.sourceName);
       } catch (getErr) {
         sourceInfo.syncStatus = 'error';
         sourceInfo.error = `Input '${source.sourceName}' not found in OBS: ${getErr.message}`;
@@ -1002,12 +1232,7 @@ class ImporterEngine extends EventEmitter {
         }));
 
         try {
-          await this.obs.call('SetInputSettings', {
-            inputName: source.sourceName,
-            inputSettings: {
-              sources: formattedSources
-            }
-          });
+          await this.setInputSettings(source.sourceName, { sources: formattedSources });
 
           this.log('diff', `[SourceSwitcher] '${source.sourceName}' updated ${sceneList.length} items: "${sceneList.join(' | ')}"`);
           this.recordDiff(source.sourceName, 'SourceSwitcher', oldSummary || 'None', newSummary);
@@ -1033,7 +1258,7 @@ class ImporterEngine extends EventEmitter {
   async applyMediaUpdate(sceneName, source, sourcetype, cleanValue, visibility, prevEnabled, visibilityKey, sourceInfo, logOpts) {
     const fileKey = sourcetype === 'Video' ? 'local_file' : 'file';
     const label = sourcetype === 'Video' ? 'Video' : 'Image';
-    const settings = await this.obs.call('GetInputSettings', { inputName: source.sourceName });
+    const settings = await this.getInputSettings(source.sourceName);
     const oldFile = settings.inputSettings ? (settings.inputSettings[fileKey] || '') : '';
     sourceInfo.currentObsValue = oldFile;
     if (!this.pendingMedia) this.pendingMedia = new Map();
@@ -1050,13 +1275,16 @@ class ImporterEngine extends EventEmitter {
     };
 
     const setFile = async () => {
-      await this.obs.call('SetInputSettings', { inputName: source.sourceName, inputSettings: { [fileKey]: cleanValue } });
+      await this.setInputSettings(source.sourceName, { [fileKey]: cleanValue });
       this.log('diff', `[${label}] '${source.sourceName}' updated ${fileKey}: ${cleanValue}`);
       this.recordDiff(source.sourceName, label, oldFile, cleanValue);
       sourceInfo.currentObsValue = cleanValue;
     };
 
     const fileChanged = cleanValue !== oldFile;
+    // Delayed changes are only sent if the same OBS connection and scene collection are still in use.
+    const obsAtSchedule = this.obs;
+    const collectionAtSchedule = this.obsStatus.sceneCollection;
     const pendingKey = `${source.sourceName}::${cleanValue}::${visibility}`;
 
     if (visibility === false) {
@@ -1067,7 +1295,7 @@ class ImporterEngine extends EventEmitter {
         } else {
           this.pendingMedia.set(pendingKey, true);
           setTimeout(async () => {
-            try { if (this.obs && this.obsStatus.connected) await setFile(); } catch (e) {
+            try { if (this.delayedWriteAllowed(obsAtSchedule, collectionAtSchedule)) await setFile(); } catch (e) {
               this.log('error', `[${label}] '${source.sourceName}' update failed: ${e.message}`);
             } finally { this.pendingMedia.delete(pendingKey); }
           }, 1500);
@@ -1084,7 +1312,7 @@ class ImporterEngine extends EventEmitter {
       } else if (!this.pendingMedia.has(pendingKey)) {
         this.pendingMedia.set(pendingKey, true);
         setTimeout(async () => {
-          try { if (this.obs && this.obsStatus.connected) await setVisible(true, prevEnabled); } catch (e) {
+          try { if (this.delayedWriteAllowed(obsAtSchedule, collectionAtSchedule)) await setVisible(true, prevEnabled); } catch (e) {
             this.log('error', `[Visibility] '${source.sourceName}' show failed: ${e.message}`);
           } finally { this.pendingMedia.delete(pendingKey); }
         }, 750);
@@ -1354,6 +1582,7 @@ class ImporterEngine extends EventEmitter {
       const ver = await testObs.call('GetVersion').catch(() => ({ obsVersion: '5.x' }));
       const scenes = await testObs.call('GetSceneList').catch(() => ({ scenes: [] }));
       const kindsData = await testObs.call('GetInputKindList').catch(() => ({ inputKinds: [] }));
+      const collections = await testObs.call('GetSceneCollectionList').catch(() => ({ sceneCollections: [], currentSceneCollectionName: '' }));
       const kinds = kindsData.inputKinds || [];
       const hasSwitcher = kinds.some(k => k.toLowerCase().includes('source_switcher') || k.toLowerCase().includes('source-switcher'));
       await testObs.disconnect().catch(() => {});
@@ -1363,7 +1592,9 @@ class ImporterEngine extends EventEmitter {
         latency,
         obsVersion: ver.obsVersion || ver.obsWebSocketVersion || '5.x',
         scenesCount: scenes.scenes ? scenes.scenes.length : 0,
-        hasSourceSwitcherPlugin: hasSwitcher
+        hasSourceSwitcherPlugin: hasSwitcher,
+        sceneCollection: collections.currentSceneCollectionName || '',
+        sceneCollections: collections.sceneCollections || []
       };
     } catch (err) {
       return {
@@ -1406,5 +1637,18 @@ class ImporterEngine extends EventEmitter {
     }
   }
 }
+
+// Column C types, by lower-case name without spaces.
+ImporterEngine.KNOWN_TYPES = {
+  text: 'Text',
+  color: 'Color',
+  colour: 'Color',
+  image: 'Image',
+  video: 'Video',
+  browser: 'Browser',
+  hs: 'HS',
+  sourceswitcher: 'SourceSwitcher',
+  switcher: 'SourceSwitcher'
+};
 
 module.exports = ImporterEngine;

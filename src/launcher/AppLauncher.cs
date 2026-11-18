@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -11,13 +12,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("OBS Google Sheet Importer GUI")]
-[assembly: AssemblyDescription("Live OBS Google Sheet Importer Desktop GUI with Tray Controls")]
+[assembly: AssemblyTitle("SheetsToOBS")]
+[assembly: AssemblyDescription("SheetsToOBS: syncs a Google Sheet to OBS Studio")]
 [assembly: AssemblyCompany("MisterBantastic")]
-[assembly: AssemblyProduct("OBS Google Sheet Importer GUI")]
+[assembly: AssemblyProduct("SheetsToOBS")]
 [assembly: AssemblyCopyright("Copyright © 2026 MisterBantastic")]
-[assembly: AssemblyFileVersion("0.2.0.0")]
-[assembly: AssemblyVersion("0.2.0.0")]
+[assembly: AssemblyFileVersion("0.3.0.0")]
+[assembly: AssemblyVersion("0.3.0.0")]
 
 namespace SheetsToOBS
 {
@@ -137,6 +138,12 @@ namespace SheetsToOBS
         private string baseDir;
         private const string TargetUrl = "http://localhost:4587";
         private bool isEngineRunning = false;
+        // Set when the user chose Exit, so the server stopping is not treated as a crash.
+        private volatile bool exiting = false;
+        // When the server was restarted after a crash (at most MaxRestarts per RestartWindow).
+        private readonly List<DateTime> restartTimes = new List<DateTime>();
+        private const int MaxRestarts = 3;
+        private static readonly TimeSpan RestartWindow = TimeSpan.FromMinutes(10);
 
         public TrayAppContext()
         {
@@ -174,7 +181,7 @@ namespace SheetsToOBS
             {
                 Icon = CreateAppIcon(),
                 ContextMenu = contextMenu,
-                Text = "SheetsToOBS - Live OBS Google Sheet Importer",
+                Text = "SheetsToOBS",
                 Visible = true
             };
 
@@ -263,10 +270,14 @@ namespace SheetsToOBS
             }
         }
 
-        private void StartServerRuntime()
+        /// <summary>
+        /// Starts the background server. Returns false only when the process could
+        /// not be started at all.
+        /// </summary>
+        private bool StartServerRuntime()
         {
             // A server is already running (e.g. started by launch-gui.bat): reuse it.
-            if (IsPortOpen("127.0.0.1", 4587)) return;
+            if (IsPortOpen("127.0.0.1", 4587)) return true;
 
             string nodeExe = Path.Combine(baseDir, "runtime", "node.exe");
             if (!File.Exists(nodeExe)) nodeExe = Path.Combine(baseDir, "node.exe");
@@ -289,35 +300,97 @@ namespace SheetsToOBS
                 WindowStyle = ProcessWindowStyle.Hidden
             };
 
+            bool started = false;
             try
             {
-                serverProcess = Process.Start(serverInfo);
-                if (serverProcess != null)
+                Process process = Process.Start(serverInfo);
+                serverProcess = process;
+                if (process != null)
                 {
-                    serverProcess.EnableRaisingEvents = true;
-                    serverProcess.Exited += (s, e) =>
-                    {
-                        if (notifyIcon != null)
-                        {
-                            notifyIcon.Visible = false;
-                            notifyIcon.Dispose();
-                            notifyIcon = null;
-                        }
-                        Application.Exit();
-                    };
-                    serverProcess.BeginErrorReadLine();
+                    started = true;
+                    process.EnableRaisingEvents = true;
+                    process.Exited += (s, e) => OnServerExited(process);
+                    process.BeginErrorReadLine();
                 }
             }
             catch (Exception ex)
             {
                 Program.WriteLauncherCrashLog(baseDir, "SERVER_SPAWN_ERROR", ex.ToString());
             }
+            if (!started) return false;
 
             // Wait for port 4587
             for (int i = 0; i < 30; i++)
             {
                 Thread.Sleep(150);
                 if (IsPortOpen("127.0.0.1", 4587)) break;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// The background server stopped. Exit code 0 means it closed on purpose
+        /// (Exit, or no window open and nothing syncing): the launcher closes too.
+        /// Any other code is a crash: the server is started again, and it resumes
+        /// syncing by itself if it was syncing (see resume-sync.flag in server.js).
+        /// </summary>
+        private void OnServerExited(Process process)
+        {
+            int code = 0;
+            try { code = process.ExitCode; } catch { }
+            bool crashed = !exiting && code != 0;
+
+            if (crashed && RestartAllowed())
+            {
+                Program.WriteLauncherCrashLog(baseDir, "SERVER_RESTART",
+                    "The background server stopped unexpectedly (exit code " + code + "). Starting it again.");
+                if (StartServerRuntime())
+                {
+                    try
+                    {
+                        if (notifyIcon != null && IsPortOpen("127.0.0.1", 4587))
+                        {
+                            notifyIcon.ShowBalloonTip(4000, "SheetsToOBS restarted",
+                                "It stopped after an error and was started again. Syncing carries on if it was running.", ToolTipIcon.Warning);
+                        }
+                    }
+                    catch { }
+                    return;
+                }
+            }
+
+            if (crashed)
+            {
+                Program.WriteLauncherCrashLog(baseDir, "SERVER_STOPPED",
+                    "The background server stopped (exit code " + code + ") and was not restarted.");
+                MessageBox.Show(
+                    "SheetsToOBS stopped after an error and could not be restarted.\n\n" +
+                    "Start it again from the Start menu. Details are in:\n" +
+                    Path.Combine(Program.DataDir(baseDir), "logs", "crash.log"),
+                    "SheetsToOBS stopped",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
+
+            if (notifyIcon != null)
+            {
+                notifyIcon.Visible = false;
+                notifyIcon.Dispose();
+                notifyIcon = null;
+            }
+            Application.Exit();
+        }
+
+        private bool RestartAllowed()
+        {
+            lock (restartTimes)
+            {
+                DateTime now = DateTime.UtcNow;
+                restartTimes.RemoveAll(t => now - t > RestartWindow);
+                if (restartTimes.Count >= MaxRestarts) return false;
+                restartTimes.Add(now);
+                return true;
             }
         }
 
@@ -443,6 +516,7 @@ namespace SheetsToOBS
 
         private void ExitApplication()
         {
+            exiting = true;
             try
             {
                 // Send clean shutdown to server

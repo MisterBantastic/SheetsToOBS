@@ -102,6 +102,38 @@
       </div>
     </header>
 
+    <!-- Scene collection safety lock: shown only when OBS has the wrong collection open -->
+    <div id="collectionLockBanner" class="collection-lock-banner hidden" role="alert">
+      <strong>⛔ Wrong OBS scene collection. Nothing is being sent to OBS.</strong>
+      <span id="collectionLockText"></span>
+    </div>
+
+    <!-- Update notices: a newer SheetsToOBS release / a newer hosted scene collection -->
+    <div id="appUpdateBanner" class="update-banner hidden" role="status">
+      <div class="update-banner-text">
+        <strong id="appUpdateTitle"></strong>
+        <span id="appUpdateNotes" class="update-banner-notes"></span>
+      </div>
+      <div class="update-banner-actions">
+        <a id="appUpdateLink" class="btn btn-sm btn-primary" href="#" target="_blank" rel="noopener noreferrer">Open release page</a>
+        <button type="button" class="btn btn-sm btn-outline" data-action="dismiss-banner" data-target="appUpdateBanner" title="Ask again next time SheetsToOBS starts">Remind me later</button>
+        <button type="button" class="btn btn-sm btn-outline" data-action="skip-app-update" title="Don't ask about this version again">Ignore this update</button>
+      </div>
+    </div>
+
+    <div id="sceneUpdateBanner" class="update-banner hidden" role="status">
+      <div class="update-banner-text">
+        <strong id="sceneUpdateTitle"></strong>
+        <span id="sceneUpdateText" class="update-banner-notes"></span>
+      </div>
+      <div class="update-banner-actions">
+        <button type="button" id="btnSceneUpdateDownload" class="btn btn-sm btn-primary" data-action="download-scene-collection">Download</button>
+        <button type="button" id="btnSceneUpdateFolder" class="btn btn-sm btn-outline hidden" data-action="open-collections-folder">Open folder</button>
+        <button type="button" id="btnSceneUpdateLater" class="btn btn-sm btn-outline" data-action="dismiss-banner" data-target="sceneUpdateBanner" title="Ask again next time SheetsToOBS starts">Remind me later</button>
+        <button type="button" id="btnSceneUpdateSkip" class="btn btn-sm btn-outline" data-action="skip-scene-collection" title="Don't ask about this version again">Ignore this update</button>
+      </div>
+    </div>
+
     <!-- REAL-TIME STATUS OVERVIEW BAR -->
     <section class="status-grid">
       <!-- OBS WebSocket Card -->
@@ -561,6 +593,83 @@
             </div>
           </div>
 
+          <!-- Setup Check -->
+          <div class="panel setup-check-card">
+            <div class="panel-header">
+              <div class="panel-title-area">
+                <h3>Setup Check</h3>
+                <p class="panel-subtitle">Checks that this PC has everything the show needs: profile, OBS WebSocket, plugins, fonts, League esports timers and media. It opens by itself once after installing or updating SheetsToOBS, and after downloading a new scene collection.</p>
+              </div>
+              <button type="button" id="btnRunSetupCheck" class="btn btn-primary">Run setup check</button>
+            </div>
+          </div>
+
+          <!-- Admin: prepare a scene collection for producers -->
+          <details class="panel share-collection-card">
+            <summary class="panel-header">
+              <div class="panel-title-area">
+                <h3>Create a Setup Kit <small class="input-hint">(league admins)</small></h3>
+                <p class="panel-subtitle">Build your own league's setup for your producers: your scene collection, media, required plugins and fonts, and your own checklist. They get it through their Setup Check.</p>
+              </div>
+            </summary>
+            <div class="panel-body form-grid">
+              <div class="form-group full-width">
+                <label for="shareCollectionFile"><strong>1.</strong> Your OBS export <small class="input-hint">(Scene Collection &rsaquo; Export)</small></label>
+                <input type="file" id="shareCollectionFile" accept=".json,application/json">
+              </div>
+              <div id="kitReview" class="form-group full-width kit-review hidden">
+                <label><strong>2.</strong> What producers need</label>
+                <span class="input-hint">Ticked plugins are required. We tick the ones we recognise in your collection; tick any others it uses. Minimum versions come from this PC.</span>
+                <div id="kitPlugins" class="kit-plugins"></div>
+                <div id="kitUnknownKinds" class="input-hint hidden"></div>
+                <label for="kitFonts">Fonts <small class="input-hint">(comma separated)</small></label>
+                <input type="text" id="kitFonts" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="form-group">
+                <label for="shareVersion">Version</label>
+                <input type="text" id="shareVersion" placeholder="1.0.0" autocomplete="off" spellcheck="false">
+                <span class="input-hint">Raise it every time you share a new export.</span>
+              </div>
+              <div class="form-group">
+                <label for="shareNotes">What changed <small class="input-hint">(optional)</small></label>
+                <input type="text" id="shareNotes" placeholder="New caster cam layout" autocomplete="off">
+              </div>
+              <div class="form-group full-width">
+                <label for="shareMediaFolder">Your media folder</label>
+                <input type="text" id="shareMediaFolder" placeholder="C:\MyLeague\Media" autocomplete="off" spellcheck="false">
+                <span class="input-hint">Files from this folder that the collection uses are shipped with it. Anything else the collection points to is listed as optional.</span>
+              </div>
+              <div class="form-group full-width">
+                <label for="shareLinks">Your own checklist for producers <small class="input-hint">(one per line; a link is optional: step | https link)</small></label>
+                <textarea id="shareLinks" rows="3" placeholder="Request edit access to the control sheet | https://docs.google.com/spreadsheets/d/...&#10;Join the production Discord&#10;Set your OBS canvas to 1920x1080" spellcheck="false"></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="shareLeagueTimers">
+                  <span>League of Legends show: producers need esports timers (eSportsNeutralTimers in game.cfg)</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="shareBlankUnlinked">
+                  <span>Also remove private URLs from sources that are <em>not</em> linked to the sheet <small class="input-hint">(those sources stay empty for producers)</small></span>
+                </label>
+              </div>
+              <div class="form-group full-width share-actions">
+                <button type="button" id="btnPrepareShare" class="btn btn-primary">Build Setup Kit</button>
+                <button type="button" class="btn btn-outline" data-action="open-publish-folder">Open output folder</button>
+              </div>
+              <div id="shareResult" class="share-result hidden full-width"></div>
+              <div class="form-group full-width">
+                <label for="kitTestUrl"><strong>3.</strong> After uploading it, test your link</label>
+                <div class="input-with-action">
+                  <input type="text" inputmode="url" id="kitTestUrl" placeholder="https://raw.githubusercontent.com/you/your-repo/main/kit/manifest.json" autocomplete="off" spellcheck="false">
+                  <button type="button" id="btnTestKitLink" class="btn btn-sm btn-outline">Test link</button>
+                </div>
+                <span class="input-hint">Downloads your kit the way a producer's PC would and checks every file. A GitHub page link is fine; it gets converted to the raw link.</span>
+                <div id="kitTestResult" class="share-result hidden"></div>
+              </div>
+            </div>
+          </details>
+
           <!-- Settings Form -->
           <div class="panel settings-panel">
             <div class="panel-header">
@@ -644,6 +753,31 @@
                   <button id="btnToggleObsAuth" class="btn btn-sm btn-outline" type="button">Show</button>
                 </div>
                 <span class="input-hint">Server password configured in OBS settings</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="cfgRequiredSceneCollection">Required Scene Collection <small class="input-hint">(safety lock, optional)</small></label>
+                <div class="input-with-action">
+                  <input type="text" id="cfgRequiredSceneCollection" list="sceneCollectionOptions" placeholder="(Any collection: no lock)" autocomplete="off" spellcheck="false">
+                  <datalist id="sceneCollectionOptions"></datalist>
+                  <button id="btnUseCurrentCollection" class="btn btn-sm btn-outline" type="button" title="Fill in the scene collection OBS has open right now">Use current</button>
+                </div>
+                <span class="input-hint">If set, SheetsToOBS only changes OBS while this scene collection is open, and shows an error otherwise. Leave empty to allow any collection.</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="cfgSceneCollectionManifestUrl">Scene Collection Update URL <small class="input-hint">(optional)</small></label>
+                <div class="input-with-action">
+                  <input type="text" inputmode="url" id="cfgSceneCollectionManifestUrl" placeholder="https://example.com/scene-collection-manifest.json" autocomplete="off" spellcheck="false">
+                  <button id="btnCheckSceneCollection" class="btn btn-sm btn-outline" type="button" title="Save and check the manifest now">Check now</button>
+                </div>
+                <span class="input-hint">A small JSON file you host, like <code>{"name": "CCS Broadcast", "version": "1.4.0", "url": "CCS.json"}</code>. When the version goes up, SheetsToOBS offers to download the new export so you can import it in OBS (Scene Collection &rsaquo; Import). <span id="sceneCollectionVersionHint"></span></span>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="cfgMediaFolder">Media Folder <small class="input-hint">(optional)</small></label>
+                <input type="text" id="cfgMediaFolder" placeholder="(Default) media folder inside the SheetsToOBS data folder" autocomplete="off" spellcheck="false">
+                <span class="input-hint">Where the collection's stingers, masks and sounds are downloaded. The downloaded collection points to this folder, so OBS finds them without the Missing Files dialog. <span id="mediaFolderDefaultHint"></span></span>
               </div>
 
               <div class="form-group full-width">
@@ -937,6 +1071,27 @@
             </div>
           </div>
 
+
+          <!-- Updates -->
+          <div class="panel personalization-panel full-width" style="grid-column: 1 / -1;" id="updatesPanel">
+            <div class="panel-header">
+              <div class="panel-title-area">
+                <h3>Updates</h3>
+                <p class="panel-subtitle">You have SheetsToOBS <span id="appVersionText">…</span>.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <label class="checkbox-label">
+                <input type="checkbox" id="chkCheckAppUpdates" checked>
+                <span><strong>Check GitHub for new versions at startup</strong><br>
+                  <small class="input-hint">Shows a notice with a link to the release page. Nothing is downloaded or installed automatically.</small></span>
+              </label>
+              <div class="update-check-row">
+                <button type="button" id="btnCheckAppUpdate" class="btn btn-sm btn-outline">Check now</button>
+                <span id="appUpdateCheckResult" class="input-hint"></span>
+              </div>
+            </div>
+          </div>
 
           <!-- Experimental Features -->
           <div class="panel personalization-panel full-width" style="grid-column: 1 / -1;" id="experimentalPanel">

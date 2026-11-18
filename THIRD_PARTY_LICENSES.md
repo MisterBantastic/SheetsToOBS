@@ -1,6 +1,6 @@
 # Third-Party Software & Dependency Licenses
 
-**OBS Google Sheet Importer GUI** incorporates and relies upon the following open-source software libraries, runtimes, and frameworks:
+**SheetsToOBS** incorporates and relies upon the following open-source software libraries, runtimes, and frameworks:
 
 ---
 

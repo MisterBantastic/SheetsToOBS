@@ -1,4 +1,4 @@
-# SheetsToOBS: OBS Google Sheet Importer GUI
+# SheetsToOBS
 
 > [!WARNING]
 > **This project was built with AI.** Most of the code, installer scripts and documentation were written by AI coding assistants, with a human directing, testing and reviewing the work. It has **not** had an independent security audit. Test it on a copy of your sheet and a test OBS scene collection before using it on a live show, and keep a manual fallback. See [AI_DISCLOSURE.md](https://github.com/MisterBantastic/SheetsToOBS/blob/main/AI_DISCLOSURE.md).
@@ -51,6 +51,77 @@ Name each OBS source you want the sheet to control:
 
 Examples: `Match Title |sheet 2`, `Team 1 Color |sheet 4`, `Sponsor Banner |sheet 5`.
 
+## Scene collection lock (recommended for live shows)
+
+In **Profiles & Config › OBS WebSocket Server Settings**, set **Required Scene Collection**. Press **Use current** while OBS has your show collection open, or pick one from the list. From then on, that profile only changes OBS while that collection is open:
+
+- **Wrong collection open:** nothing is sent to OBS, and the sheet isn't even read. A red banner and a **Wrong Collection** badge show which collection is open and which one is required, and the log records it once.
+- **While OBS is switching collections:** syncing pauses, then resumes on its own if the new collection is the right one.
+- **Field left empty:** any collection is allowed, as before.
+
+The setting is saved per profile and is included when you share a profile, so producers get the same protection.
+
+## Updates
+
+**When it checks:** once when SheetsToOBS starts, and whenever you press **Check now**. There are no background checks after that. Each notice has two buttons:
+- **Remind me later** hides it until the next start.
+- **Ignore this update** hides that version for good. You'll still hear about the next one.
+
+**App updates:** SheetsToOBS asks GitHub whether a newer release exists. If one does, a banner links to the release page, where you download the installer. Nothing is downloaded or installed automatically. **Personalization › Updates** has an on/off switch and **Check now**.
+
+**Scene collection updates (optional):** if you share an OBS scene collection with your producers, host a small manifest next to the export (GitHub, your website, any `https://` address):
+
+```json
+{
+  "name": "CCS Broadcast",
+  "version": "1.4.0",
+  "url": "CCS_Broadcast.json",
+  "notes": "New caster cam layout",
+  "sha256": "optional: SHA-256 of the .json file"
+}
+```
+
+- `url` is the file from **OBS › Scene Collection › Export**. It can be a full `https://` address, or relative to the manifest.
+- Put the manifest's address in **Profiles & Config › Scene Collection Update URL**. The setting is per profile and is included when you share a profile.
+- Raise `version` whenever you publish a new export. SheetsToOBS then shows a banner, and **Download** saves the file to the `scene-collections` folder next to your settings (in an installed copy, that's `%APPDATA%\SheetsToOBS`).
+- To finish, import the downloaded file in **OBS › Scene Collection › Import**. OBS can't import a collection over WebSocket, so this step stays manual.
+- **Check now** next to the field saves the address and checks it straight away.
+
+### Create a Setup Kit for your league (admins)
+
+Any league's admin can make their own setup for their own producers, with no code and no hand-written manifest. Open **Profiles & Config › Create a Setup Kit**:
+
+1. **Pick your OBS export.** The app lists every third-party plugin on your PC and ticks the ones it recognises in your collection. Tick any others your show needs, and add a download link for each. Edit the fonts if needed.
+2. **Fill in the rest:** a version, your media folder, and your own checklist, one step per line. A link is optional, for example `Join the production Discord` or `Request sheet access | https://...`. There's also a tick box for League of Legends esports timers.
+3. **Build, upload, test.** Upload the output folder to any public `https://` host, such as a free public GitHub repo. A private repo won't work. Paste the link into **Test link**: it downloads your kit the way a producer's PC would, and checks every file. If a GitHub page link is pasted, it's converted to the raw link.
+4. **Hand it over.** Press **Use this link in this profile**, then **Export Profile**, and send your producers that file with the SheetsToOBS installer. They import it and press **Run setup check**.
+
+Each profile has its own kit, so someone who works for two leagues just uses two profiles.
+
+**Only use a kit from an admin you trust.** A kit can add browser sources and other content to your OBS. The Setup Check shows which site a kit comes from. Kits can't download program files, can't run anything, and can't change files on your PC. The only built-in fix is the League timers change, and it runs only when you press **Fix**.
+
+When you build a kit:
+
+- **Removes private URLs** (StreamElements and Streamlabs overlays, Discord webhooks, `key=`/`password=` links, VDO.Ninja rooms) from `|sheet` sources. It then reads your sheet and warns about any browser source whose row won't put the URL back, because that source would be empty for producers. Private URLs on sources that aren't linked to the sheet are listed so you can move them to a sheet row, or you can tick the box to remove them too. This catches the common kinds of private link, not every possible one, so read through the report before uploading.
+- **Makes media paths portable:** paths to files in your media folder (stingers, masks, sounds, and the Advanced Scene Switcher macro images) are rewritten so that on each producer's PC they point at their own media folder. No more Missing Files dialog or editing macros by hand. Anything else the collection points to (for example reaction videos or a music folder) is listed as **optional**.
+- **Lists what producers need:** the plugins you ticked, with the versions installed on your PC as the minimum, and the fonts in its text sources.
+
+The result goes to a `publish` folder next to your settings. GitHub allows up to 100 MB per file.
+
+## Setup Check
+
+**Profiles & Config › Run setup check** checks, and fixes where it can:
+
+- the profile (Sheet ID and API key), with an **Import profile** button for the file your league admin sent you;
+- the OBS WebSocket connection;
+- the required plugins and their versions;
+- the required fonts;
+- League esports timers: **Fix** adds `[Spectator] eSportsNeutralTimers=1` to `game.cfg`, after making a backup;
+- the media files, with a **Download** button;
+- your league admin's own checklist.
+
+It opens by itself only once after installing or updating SheetsToOBS, and after downloading a new scene collection. It never runs on a normal start.
+
 ## Sheet layout
 
 The importer reads columns **A–E** of the data tab, starting at the row given in the profile's range (default `C2:D`, so row 2):
@@ -75,6 +146,8 @@ The importer reads columns **A–E** of the data tab, starting at the row given 
 | `HS` | Any scene item | `show` or `hide`. |
 | `SourceSwitcher` / `Switcher` | [Source Switcher plugin](https://obsproject.com/forum/resources/source-switcher.941/) | Sets the list of sources, separated by `;;`. |
 
+Capital letters don't matter (`text` works like `Text`), and an empty cell means `Text`. Any other word is flagged on that source as "Unknown type" and its value is not sent to OBS.
+
 ## Value tags (column D)
 
 | Tag | Example | Effect |
@@ -85,6 +158,13 @@ The importer reads columns **A–E** of the data tab, starting at the row given 
 | `;;` | `Cam 1, Desk;; Cam 2, Crowd` | Source Switcher list items (comma-safe). |
 
 ---
+
+## Logs and crash recovery
+
+- **Activity log:** everything shown in the app's log is also saved as `logs\sync-<date>.log` in the settings folder (see below), one file per day, kept for 14 days. Use it to see what happened during a show. Private-looking URLs (overlay tokens, keys, passwords) are left out.
+- **Crash log:** errors are written to `logs\crash.log`. At 1 MB it is renamed to `crash.log.old` and a new one is started.
+- **If the app stops with an error,** it starts itself again (up to 3 times in 10 minutes) and shows a tray notification. If it was syncing, it carries on syncing.
+- **If Google can't be reached** or the API quota runs out, the app retries less and less often (up to every 2 minutes) and logs the error once. **Sync Now** retries straight away.
 
 ## Where settings are stored
 
@@ -107,7 +187,7 @@ Each save writes a temporary file and renames it into place, and the previous go
 | **Full Backup** | Everything, including the OBS password and tokens | Your own PC only |
 | **Import Config** | Any of the above | Keeps your PC's own OBS connection and password |
 
-The OBS password and Apps Script token are never included in a shared export. Exported files (`obs-sheets-*.json`) are listed in `.gitignore`, so they can't be committed by accident.
+The OBS password and Apps Script token are never included in a shared export. Exported files (`SheetsToOBS-*.json`) are listed in `.gitignore`, so they can't be committed by accident.
 
 ---
 
@@ -152,7 +232,7 @@ If you enable "Allow other devices on my network":
 
 Release binaries (`SheetsToOBS.exe`, the installer, `runtime\`, `node_modules\`) are not committed.
 
-**Publishing a release:** run `build-installer.bat`, then on GitHub go to **Releases › Draft a new release**. Tag it (e.g. `v0.2.0`) and attach `installer\Output\Setup_SheetsToOBS_v0.2.0.exe`. The Download link at the top of this README always points to the newest release.
+**Publishing a release:** run `build-installer.bat`, then on GitHub go to **Releases › Draft a new release**. Tag it (e.g. `v0.3.0`) and attach `installer\Output\Setup_SheetsToOBS_v0.2.0.exe`. The Download link at the top of this README always points to the newest release.
 
 ---
 
