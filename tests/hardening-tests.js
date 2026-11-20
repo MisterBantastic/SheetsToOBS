@@ -1362,6 +1362,20 @@ function fakeObs(state) {
     assert.ok(/data-fix="import-profile"/.test(ui) && /fix === 'import-profile'/.test(ui), 'the window draws the button and handles it');
   });
 
+  await test('powershell: started without PowerShell 7\'s module path (it broke built-in commands)', async () => {
+    const { windowsPowerShellEnv } = require('../src/engine/folder-picker');
+    const env = windowsPowerShellEnv({ PATH: 'x', PSModulePath: 'C:\\Program Files\\PowerShell\\7\\Modules', APPDATA: 'y' });
+    assert.deepStrictEqual(env, { PATH: 'x', APPDATA: 'y' });
+    assert.ok(!('Psmodulepath' in windowsPowerShellEnv({ Psmodulepath: 'z' })), 'any letter case');
+    const setupSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'engine', 'setup-check.js'), 'utf8');
+    assert.ok(setupSrc.includes('...windowsPowerShellEnv()'), 'Setup Check uses it too');
+    const helperSrc = fs.readFileSync(path.join(__dirname, '..', 'installer', 'upgrade-helper.ps1'), 'utf8');
+    const code = helperSrc.split('\n').filter(l => !l.trim().startsWith('#')).join('\n');
+    ['Copy-Item', 'Get-FileHash', 'Get-ChildItem', 'Test-Path', 'Get-CimInstance', 'Stop-Process', 'New-Item'].forEach((cmd) => {
+      assert.ok(!code.includes(cmd), `upgrade-helper.ps1 must not use ${cmd} (it loads modules from PSModulePath)`);
+    });
+  });
+
   await test('browse: the folder picker returns the chosen folder, a cancel, or a clear error', async () => {
     const { pickFolder, TITLES } = require('../src/engine/folder-picker');
     let seenEnv = null;
@@ -1459,9 +1473,16 @@ function fakeObs(state) {
     if (process.platform !== 'win32') return;
     const { spawnSync } = require('child_process');
     const helper = path.join(__dirname, '..', 'installer', 'upgrade-helper.ps1');
-    const migrate = (oldDir, appData) => spawnSync('powershell.exe',
-      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', helper, '-Migrate', '-OldDir', oldDir],
-      { env: { ...process.env, APPDATA: appData }, encoding: 'utf8' }).status;
+    // Started with PowerShell 7's module folders in PSModulePath, as on GitHub's test
+    // machines (where this used to fail): the helper must not depend on them.
+    const ps7Env = { ...process.env, PSModulePath: ['C:\\Program Files\\PowerShell\\7\\Modules', process.env.PSModulePath || ''].join(';') };
+    const migrate = (oldDir, appData) => {
+      const r = spawnSync('powershell.exe',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', helper, '-Migrate', '-OldDir', oldDir],
+        { env: { ...ps7Env, APPDATA: appData }, encoding: 'utf8' });
+      if (r.status !== 0) console.error('upgrade-helper said:', r.stderr || r.stdout || r.error);
+      return r.status;
+    };
 
     const oldDir = path.join(TMP, 'upg', 'OBS Google Sheet Importer GUI');
     fs.mkdirSync(path.join(oldDir, 'logs'), { recursive: true });

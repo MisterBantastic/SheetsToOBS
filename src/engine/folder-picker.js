@@ -30,11 +30,22 @@ const SCRIPT = [
   'if ($r -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($d.SelectedPath) }'
 ].join('\n');
 
+/**
+ * Environment for starting Windows PowerShell 5.1. PSModulePath is left out: when
+ * this app was started from PowerShell 7, the inherited value points at PowerShell 7's
+ * own modules, and 5.1 fails to load its built-in commands from there.
+ */
+function windowsPowerShellEnv(base = process.env) {
+  const env = { ...base };
+  Object.keys(env).filter(k => k.toLowerCase() === 'psmodulepath').forEach(k => delete env[k]);
+  return env;
+}
+
 /** Runs the picker script; resolves with what it printed. Replaced by tests. */
 function runPicker(env) {
   return new Promise((resolve, reject) => {
     execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-STA', '-ExecutionPolicy', 'Bypass', '-Command', SCRIPT], {
-      env: { ...process.env, ...env },
+      env: { ...windowsPowerShellEnv(), ...env },
       windowsHide: true,
       timeout: 30 * 60 * 1000, // the user may take a while; don't hang forever
       maxBuffer: 64 * 1024
@@ -65,4 +76,4 @@ async function pickFolder({ purpose, start = '' } = {}, { run = runPicker, platf
   }
 }
 
-module.exports = { pickFolder, TITLES };
+module.exports = { pickFolder, TITLES, windowsPowerShellEnv };

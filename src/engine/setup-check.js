@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { execFile } = require('child_process');
 const { compareVersions } = require('./update-checker');
 const { KNOWN_PLUGINS, BUILT_IN_DLLS } = require('./scene-share');
+const { windowsPowerShellEnv } = require('./folder-picker');
 
 // Setup Check: walks a producer through everything the show needs on this PC
 // (profile, OBS WebSocket, plugins + versions, fonts, League esports timers,
@@ -40,7 +41,7 @@ const realSystem = {
     const script = '$p = $env:STO_PATHS | ConvertFrom-Json; @($p | ForEach-Object { ' +
       '$v = (Get-Item -LiteralPath $_).VersionInfo; [pscustomobject]@{ p = $_; f = $v.FileVersion; pr = $v.ProductVersion } }) | ConvertTo-Json -Compress';
     const out = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
-      env: { ...process.env, STO_PATHS: JSON.stringify(paths) }
+      env: { ...windowsPowerShellEnv(), STO_PATHS: JSON.stringify(paths) }
     });
     const result = {};
     try {
