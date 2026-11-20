@@ -636,7 +636,10 @@
               </div>
               <div class="form-group full-width">
                 <label for="shareMediaFolder">Your media folder</label>
-                <input type="text" id="shareMediaFolder" placeholder="C:\MyLeague\Media" autocomplete="off" spellcheck="false">
+                <div class="input-with-action">
+                  <input type="text" id="shareMediaFolder" placeholder="C:\MyLeague\Media" autocomplete="off" spellcheck="false">
+                  <button type="button" class="btn btn-sm btn-outline" data-action="browse-folder" data-target="shareMediaFolder" data-purpose="kit-media" title="Choose the folder in a Windows folder window">Browse…</button>
+                </div>
                 <span class="input-hint">Files from this folder that the collection uses are shipped with it. Anything else the collection points to is listed as optional.</span>
               </div>
               <div class="form-group full-width">
@@ -664,7 +667,7 @@
                   <input type="text" inputmode="url" id="kitTestUrl" placeholder="https://raw.githubusercontent.com/you/your-repo/main/kit/manifest.json" autocomplete="off" spellcheck="false">
                   <button type="button" id="btnTestKitLink" class="btn btn-sm btn-outline">Test link</button>
                 </div>
-                <span class="input-hint">Downloads your kit the way a producer's PC would and checks every file. A GitHub page link is fine; it gets converted to the raw link.</span>
+                <span class="input-hint">Downloads your kit the way a producer's PC would and checks every file, so it can take a minute with large videos. A GitHub page link is fine; it gets converted to the raw link.</span>
                 <div id="kitTestResult" class="share-result hidden"></div>
               </div>
             </div>
@@ -776,7 +779,10 @@
 
               <div class="form-group full-width">
                 <label for="cfgMediaFolder">Media Folder <small class="input-hint">(optional)</small></label>
-                <input type="text" id="cfgMediaFolder" placeholder="(Default) media folder inside the SheetsToOBS data folder" autocomplete="off" spellcheck="false">
+                <div class="input-with-action">
+                  <input type="text" id="cfgMediaFolder" placeholder="(Default) media folder inside the SheetsToOBS data folder" autocomplete="off" spellcheck="false">
+                  <button type="button" class="btn btn-sm btn-outline" data-action="browse-folder" data-target="cfgMediaFolder" data-purpose="profile-media" title="Choose the folder in a Windows folder window">Browse…</button>
+                </div>
                 <span class="input-hint">Where the collection's stingers, masks and sounds are downloaded. The downloaded collection points to this folder, so OBS finds them without the Missing Files dialog. <span id="mediaFolderDefaultHint"></span></span>
               </div>
 

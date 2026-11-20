@@ -9,6 +9,7 @@ const updates = require('./engine/update-checker');
 const sceneShare = require('./engine/scene-share');
 const setupCheck = require('./engine/setup-check');
 const { LogFile, rotateIfLarge } = require('./engine/log-file');
+const folderPicker = require('./engine/folder-picker');
 const { dataFile, dataDir } = require('./paths');
 
 // Experimental Control Sheet / Web Dashboard. Everything behind this switch is
@@ -146,6 +147,7 @@ class DesktopServer {
     this.setupSystem = setupCheck.realSystem; // replaced by tests
     this.testObs = (address, password) => ImporterEngine.testObsConnection(address, password);
     this.readSheetRows = (config) => DesktopServer.fetchSheetRows(config); // replaced by tests
+    this.pickFolder = (opts) => folderPicker.pickFolder(opts); // replaced by tests
 
     this.setupEngineListeners();
   }
@@ -965,6 +967,16 @@ class DesktopServer {
             res.end(JSON.stringify({ success: false, error: e.message }));
           }
         });
+        return;
+      }
+
+      // API: "Browse…" for folder fields: opens the Windows folder picker on this PC.
+      // Never in LAN_ALLOWED_API, so other devices can't pop up windows here.
+      if (pathname === '/api/pick-folder' && req.method === 'POST') {
+        readJsonBody(req)
+          .then(body => this.pickFolder({ purpose: String(body.purpose || ''), start: String(body.start || '') }))
+          .then(result => sendJson(res, 200, { success: true, ...result }))
+          .catch(e => sendJson(res, 200, { success: false, error: e.message || String(e) }));
         return;
       }
 

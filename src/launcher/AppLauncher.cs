@@ -17,8 +17,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("MisterBantastic")]
 [assembly: AssemblyProduct("SheetsToOBS")]
 [assembly: AssemblyCopyright("Copyright © 2026 MisterBantastic")]
-[assembly: AssemblyFileVersion("0.3.0.0")]
-[assembly: AssemblyVersion("0.3.0.0")]
+[assembly: AssemblyFileVersion("0.3.1.0")]
+[assembly: AssemblyVersion("0.3.1.0")]
 
 namespace SheetsToOBS
 {

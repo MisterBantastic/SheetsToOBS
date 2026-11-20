@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1
+
+Run the new installer over 0.3.0. Your settings are kept.
+
+### New
+- **Browse… for media folders.** Both media folder fields (the profile's **Media Folder** and **Your media folder** in Create a Setup Kit) have a **Browse…** button that opens the normal Windows folder window.
+
+### Fixed
+- **The profile's Media Folder wasn't saved** unless you also pressed Save Profile Settings. It now saves on its own, like the other fields.
+- **Test link gave no answer when the kit worked.** It now shows that it's checking, then a clear green "All checks passed" or red "X of N checks failed" box with a message, scrolled into view. A re-test no longer leaves the old result on screen while it runs.
+
 ## 0.3.0
 
 Upgrading from 0.2.0: run the new installer over the old one. The app is now called **SheetsToOBS** everywhere: Start menu, Settings › Apps and the install folder (`C:\Program Files\SheetsToOBS`). Your settings are moved to `%APPDATA%\SheetsToOBS` and the old "OBS Google Sheet Importer GUI" folder and shortcuts are removed. Exported profiles are now named `SheetsToOBS-….json`; older `obs-sheets-….json` files still import.

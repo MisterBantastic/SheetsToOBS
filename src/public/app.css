@@ -3154,6 +3154,10 @@ body.experimental-off .experimental-only { display: none !important; }
 .share-result h5 { margin: 12px 0 4px; font-size: 0.85rem; }
 .share-result ul { margin: 0 0 0 18px; padding: 0; }
 .share-result code { overflow-wrap: anywhere; }
+.kit-test-status { margin: 8px 0; color: var(--text-secondary, #9ca3af); }
+.kit-test-verdict { margin: 8px 0; padding: 8px 10px; border-radius: 6px; }
+.kit-test-verdict.ok { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.45); }
+.kit-test-verdict.fail { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.45); }
 .setup-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .setup-item { display: grid; grid-template-columns: 24px 1fr auto; gap: 4px 10px; align-items: start; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); }
 .setup-item.fail { border-color: rgba(239, 68, 68, 0.5); background: rgba(239, 68, 68, 0.08); }

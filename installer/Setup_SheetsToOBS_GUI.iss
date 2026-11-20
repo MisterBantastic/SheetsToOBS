@@ -9,7 +9,7 @@
 #define OldAppName "OBS Google Sheet Importer GUI"
 ; Never change: Windows uses it to recognise earlier versions as the same app.
 #define MyAppIdGuid "D37E6B81-54A2-4B22-8A97-152F94EC210A"
-#define MyAppVersion "0.3.0"
+#define MyAppVersion "0.3.1"
 #define MyAppPublisher "MisterBantastic"
 #define MyAppURL "https://github.com/MisterBantastic/SheetsToOBS"
 #define MyAppExeName "SheetsToOBS.exe"

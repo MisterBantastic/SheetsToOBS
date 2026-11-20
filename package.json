@@ -1,6 +1,6 @@
 {
   "name": "sheetstoobs",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Desktop GUI for syncing Google Sheets to OBS Studio sources (AI-assisted project; see AI_DISCLOSURE.md)",
   "main": "src/server.js",
   "scripts": {

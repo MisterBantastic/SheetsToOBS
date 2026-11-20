@@ -2165,7 +2165,7 @@ function initSettings() {
   // Real-time auto-save listeners on all form fields
   const inputIds = [
     'cfgSheetId', 'cfgTabName', 'cfgRange', 'cfgApiKey', 
-    'cfgObsAddress', 'cfgObsAuth', 'cfgRequiredSceneCollection', 'cfgPolling', 'cfgAutoStart', 
+    'cfgObsAddress', 'cfgObsAuth', 'cfgRequiredSceneCollection', 'cfgMediaFolder', 'cfgPolling', 'cfgAutoStart',
     'cfgLogVisibilityOnlyOnChanges', 'cfgShowVisibilityLogs',
     'cfgLogMissingRowsOnlyOnChanges', 'cfgShowMissingRowLogs',
     'cfgControlTab', 'cfgControlPoll', 'cfgScriptUrl', 'cfgScriptToken', 'cfgAllowLanDashboard'
@@ -3048,6 +3048,10 @@ async function testKitLink() {
   }
   btn.disabled = true;
   btn.textContent = 'Testing…';
+  // Replace any earlier result straight away, so a re-test never looks like nothing happened.
+  box.innerHTML = '<p class="kit-test-status">⏳ Downloading your kit the way a producer\'s PC would and checking every file. This can take a minute with large videos…</p>';
+  box.classList.remove('hidden');
+  box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   try {
     const res = await fetch('/api/publish/test-link', {
       method: 'POST',
@@ -3058,6 +3062,10 @@ async function testKitLink() {
     if (!data.success) throw new Error(data.error || 'Test failed');
     input.value = data.url;
     const rows = data.items.map(i => `<li>${i.ok ? '✅' : '❌'} ${escapeHtml(i.label)}: ${escapeHtml(i.detail)}</li>`).join('');
+    const failed = data.items.filter(i => !i.ok).length;
+    const verdict = data.ok
+      ? `<p class="kit-test-verdict ok"><strong>✅ All ${data.items.length} checks passed.</strong> Producers can download this kit.</p>`
+      : `<p class="kit-test-verdict fail"><strong>❌ ${failed} of ${data.items.length} checks failed.</strong> Producers can't use this kit yet.</p>`;
     const next = data.ok
       ? `<h5>Your kit works. Give it to your producers:</h5>
          <ul>
@@ -3066,13 +3074,46 @@ async function testKitLink() {
            <li>They import the file and press Run setup check.</li>
          </ul>`
       : '<h5>Fix the ❌ items, then test again.</h5>';
-    box.innerHTML = `<ul class="kit-test-list">${rows}</ul>${next}`;
+    box.innerHTML = `${verdict}<ul class="kit-test-list">${rows}</ul>${next}`;
     box.classList.remove('hidden');
+    box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    showToast(data.ok ? 'Your kit link works.' : `Kit link checked: ${failed} problem${failed === 1 ? '' : 's'} to fix.`, data.ok ? 'success' : 'error');
   } catch (err) {
+    box.innerHTML = `<p class="kit-test-verdict fail"><strong>❌ Could not test the link:</strong> ${escapeHtml(err.message)}</p>`;
     showToast(`Could not test the link: ${err.message}`, 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Test link';
+  }
+}
+
+/** "Browse…" next to a folder field: the server opens the Windows folder picker. */
+async function browseForFolder(btn) {
+  const input = document.getElementById(btn.getAttribute('data-target') || '');
+  if (!input) return;
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Choose…';
+  showToast('A folder window has opened. If you can\'t see it, check behind this window or on the taskbar.', 'info');
+  try {
+    const res = await fetch('/api/pick-folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ purpose: btn.getAttribute('data-purpose') || '', start: input.value.trim() })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Could not open the folder window');
+    if (data.cancelled) return;
+    input.value = data.path;
+    // Same as typing it: profile fields save themselves.
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    showToast(`Folder set: ${data.path}`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
   }
 }
 
@@ -3282,6 +3323,9 @@ function initDelegatedActions() {
         break;
       case 'open-collections-folder':
         fetch('/api/updates/open-folder', { method: 'POST' }).catch(() => {});
+        break;
+      case 'browse-folder':
+        browseForFolder(el);
         break;
       case 'use-kit-link':
         useKitLink();

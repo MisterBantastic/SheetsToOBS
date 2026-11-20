@@ -1362,6 +1362,63 @@ function fakeObs(state) {
     assert.ok(/data-fix="import-profile"/.test(ui) && /fix === 'import-profile'/.test(ui), 'the window draws the button and handles it');
   });
 
+  await test('browse: the folder picker returns the chosen folder, a cancel, or a clear error', async () => {
+    const { pickFolder, TITLES } = require('../src/engine/folder-picker');
+    let seenEnv = null;
+    const run = async (env) => { seenEnv = env; return '\uFEFFD:\\Show Media\\CCS\r\n'; };
+    assert.deepStrictEqual(await pickFolder({ purpose: 'kit-media', start: 'C:\\Old' }, { run, platform: 'win32' }), { path: 'D:\\Show Media\\CCS' });
+    assert.strictEqual(seenEnv.STO_PICK_START, 'C:\\Old', 'starts in the folder already typed');
+    assert.strictEqual(seenEnv.STO_PICK_TITLE, TITLES['kit-media'], 'the window title comes from the app, not the page');
+    assert.deepStrictEqual(await pickFolder({ purpose: 'profile-media' }, { run: async () => '', platform: 'win32' }), { cancelled: true });
+    await assert.rejects(pickFolder({ purpose: 'anything-else' }, { run, platform: 'win32' }), /Unknown folder field/);
+    await assert.rejects(pickFolder({ purpose: 'kit-media' }, { run, platform: 'linux' }), /only works on Windows/);
+
+    // Only one folder window at a time; the next one works once it closes.
+    let release;
+    const slow = () => new Promise((resolve) => { release = () => resolve('C:\\A'); });
+    const first = pickFolder({ purpose: 'kit-media' }, { run: slow, platform: 'win32' });
+    await assert.rejects(pickFolder({ purpose: 'kit-media' }, { run, platform: 'win32' }), /already open/);
+    release();
+    assert.deepStrictEqual(await first, { path: 'C:\\A' });
+    assert.deepStrictEqual(await pickFolder({ purpose: 'kit-media' }, { run, platform: 'win32' }), { path: 'D:\\Show Media\\CCS' });
+  });
+
+  await test('server: Browse is this-PC only, and the UI shows a verdict for Test link', async () => {
+    const DesktopServer = require('../src/server');
+    const file = path.join(TMP, 'browse-config.json');
+    writeConfig(file);
+    const srv = new DesktopServer(4633, file);
+    const calls = [];
+    srv.pickFolder = async (opts) => { calls.push(opts); return { path: 'D:\\Media' }; };
+    const server = srv.start();
+    try {
+      await new Promise(r => setTimeout(r, 300));
+      const ok = await request(4633, '/api/pick-folder', { method: 'POST', body: { purpose: 'kit-media', start: 'C:\\x' } });
+      assert.deepStrictEqual(JSON.parse(ok.body), { success: true, path: 'D:\\Media' });
+      assert.deepStrictEqual(calls, [{ purpose: 'kit-media', start: 'C:\\x' }]);
+      const cross = await request(4633, '/api/pick-folder', { method: 'POST', body: { purpose: 'kit-media' }, headers: { Origin: 'https://evil.example' } });
+      assert.strictEqual(cross.status, 403, 'other websites cannot open folder windows');
+      assert.strictEqual(calls.length, 1);
+    } finally {
+      clearInterval(srv.watchdogInterval);
+      server.close();
+    }
+    const serverSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
+    const lanList = serverSrc.slice(serverSrc.indexOf('const LAN_ALLOWED_API'), serverSrc.indexOf(']);', serverSrc.indexOf('const LAN_ALLOWED_API')));
+    assert.ok(!lanList.includes('pick-folder'), 'never reachable from other devices');
+
+    const ui = fs.readFileSync(path.join(__dirname, '..', 'src', 'public', 'app.js'), 'utf8');
+    const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'public', 'index.html'), 'utf8');
+    assert.ok(/data-target="shareMediaFolder" data-purpose="kit-media"/.test(html) && /data-target="cfgMediaFolder" data-purpose="profile-media"/.test(html), 'both media folder fields have Browse');
+    const autoSave = ui.slice(ui.indexOf('const inputIds = ['), ui.indexOf('];', ui.indexOf('const inputIds = [')));
+    assert.ok(autoSave.includes("'cfgMediaFolder'"), 'the profile media folder saves itself, typed or browsed (it used to need Save Profile Settings)');
+    const testFn = ui.slice(ui.indexOf('async function testKitLink'), ui.indexOf('async function browseForFolder'));
+    assert.ok(/kit-test-status/.test(testFn), 'shows that the test is running');
+    assert.ok(/All \$\{data\.items\.length\} checks passed/.test(testFn), 'says clearly when it passes');
+    assert.ok((testFn.match(/scrollIntoView/g) || []).length >= 2, 'brings the result into view');
+    assert.ok(/showToast\(data\.ok/.test(testFn), 'a message on success too, not only on failure');
+  });
+
   await test('release: the app is called SheetsToOBS everywhere a user sees it', async () => {
     const repo = path.join(__dirname, '..');
     const read = f => fs.readFileSync(path.join(repo, f), 'utf8');
