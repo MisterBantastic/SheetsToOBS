@@ -1,7 +1,7 @@
 # SheetsToOBS
 
 > [!WARNING]
-> **This project was built with AI.** Most of the code, installer scripts and documentation were written by AI coding assistants, with a human directing, testing and reviewing the work. It has **not** had an independent security audit. Test it on a copy of your sheet and a test OBS scene collection before using it on a live show, and keep a manual fallback. See [AI_DISCLOSURE.md](AI_DISCLOSURE.md).
+> **This project was built with AI.** Most of the code, installer scripts and documentation were written by AI coding assistants, with a human directing, testing and reviewing the work. It has **not** had an independent security audit. Test it on a copy of your sheet and a test OBS scene collection before using it on a live show, and keep a manual fallback. See [AI_DISCLOSURE.md](https://github.com/MisterBantastic/SheetsToOBS/blob/main/AI_DISCLOSURE.md).
 
 ## ⬇️ Download
 
